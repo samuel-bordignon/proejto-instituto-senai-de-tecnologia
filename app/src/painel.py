@@ -2,9 +2,11 @@ import sys
 from pathlib import Path
 
 # Garante que a raiz do projeto e app/src estejam no sys.path
-RAIZ_PROJETO = Path(__file__).resolve().parent.parent.parent
-if str(RAIZ_PROJETO) not in sys.path:
-    sys.path.insert(0, str(RAIZ_PROJETO))
+PASTA_SRC = Path(__file__).resolve().parent
+RAIZ_PROJETO = PASTA_SRC.parent.parent
+for _caminho in (str(RAIZ_PROJETO), str(PASTA_SRC)):
+    if _caminho not in sys.path:
+        sys.path.insert(0, _caminho)
 
 import streamlit as st
 from data.mock_data import CLIENTES, SEMENTES, nova_amostra
