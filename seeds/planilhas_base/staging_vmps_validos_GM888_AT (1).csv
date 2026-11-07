@@ -1,0 +1,227 @@
+legislacao,origem_amostra,id_num,descricao,valor_min,valor_max,unidade_medida
+Portaria GM/MS Nº888 5/21,Agua Tratada,4,Amônia,0.000000,1.200000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,5,Bromato,0.000000,0.010000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10,Cloraminas,0.000000,4.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11,Cloretos,0.000000,250.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,12,Clorito,0.000000,0.700000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,16,Cor Aparente,0.000000,15.000000,Pt/Co
+Portaria GM/MS Nº888 5/21,Agua Tratada,23,Dureza Total,0.000000,300.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,25,Fluoreto,0.000000,1.500000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,29,Gosto e Odor,0.000000,6.000000,Intensidade
+Portaria GM/MS Nº888 5/21,Agua Tratada,31,Nitrato (NO3-N),0.000000,10.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,32,Nitrito (NO2-N),0.000000,1.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,36,Odor,0.000000,6.000000,Intensidade
+Portaria GM/MS Nº888 5/21,Agua Tratada,43,Sulfato,0.000000,250.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,47,Sulfeto de Hidrogênio (H2S-S-2),0.000000,0.050000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,48,Turbidez,0.000000,5.000000,NTU
+Portaria GM/MS Nº888 5/21,Agua Tratada,57,Coliformes Totais (NMP),0.000000,1.000000,NMP/100 mL
+Portaria GM/MS Nº888 5/21,Agua Tratada,58,Coliformes Totais (UFC),0.000000,1.000000,UFC/100mL
+Portaria GM/MS Nº888 5/21,Agua Tratada,60,Densidade de Cianobactérias,0.000000,20000.000000,células/mL
+Portaria GM/MS Nº888 5/21,Agua Tratada,62,Escherichia coli (UFC),0.000000,1.000000,UFC/100mL
+Portaria GM/MS Nº888 5/21,Agua Tratada,63,Escherichia coli (NMP),0.000000,1.000000,NMP/100 mL
+Portaria GM/MS Nº888 5/21,Agua Tratada,67,Microcistinas,0.000000,1.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,68,Saxitoxinas,0.000000,3.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,217,Alumínio,0.000000,0.200000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,218,Antimônio,0.000000,0.006000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,219,Arsênio,0.000000,0.010000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,220,Bário,0.000000,0.700000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,224,Cádmio,0.000000,0.003000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,226,Chumbo,0.000000,0.010000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,227,Cobre,0.000000,2.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,229,Cromo,0.000000,0.050000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,231,Ferro,0.000000,0.300000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,233,Manganês,0.000000,0.100000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,235,Mercúrio,0.000000,0.001000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,237,Níquel,0.000000,0.070000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,241,Selênio,0.000000,0.040000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,243,Sódio,0.000000,200.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,244,Urânio,0.000000,0.030000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,249,Zinco,0.000000,5.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,348,Benzo(a)pireno,0.000000,0.400000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,356,Di(2-etilhexil)ftalato,0.000000,8.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,382,"2,4-diclorofenol",0.000000,0.200000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,386,"2,4,6-triclorofenol",0.000000,0.200000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,392,Pentaclorofenol,0.000000,9.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,396,g-HCH (y-HCH ou gama-Lindano),0.000000,2.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,417,Trifluralina,0.000000,20.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,419,Simazina,0.000000,2.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,421,Clorotalonil,0.000000,45.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,422,Metribuzim,0.000000,25.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,423,Alacloro,0.000000,20.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,424,Metolacloro,0.000000,10.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,429,Molinato,0.000000,6.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,430,Diuron,0.000000,20.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,436,Terbufos,0.000000,1.200000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,440,Malation,0.000000,60.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,665,Diclorometano (Cloreto de Metileno),0.000000,20.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,671,Tetracloreto de Carbono,0.000000,4.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,672,Benzeno,0.000000,5.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,673,"Tricloroeteno (1,1,2-Tricloroeteno)",0.000000,4.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,676,Tolueno,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,678,Tetracloroeteno,0.000000,40.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,680,Monoclorobenzeno,0.000000,0.020000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,682,Etilbenzeno,0.000000,300.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,690,"1,4-Diclorobenzeno",0.000000,5.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,691,"1,2-Diclorobenzeno",0.000000,0.001000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,777,Cloro Residual Livre,0.200000,5.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,793,pH,6.000000,9.000000,
+Portaria GM/MS Nº888 5/21,Agua Tratada,833,Carbofurano,0.000000,7.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,863,"2,4-D",0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,877,Glifosato+AMPA,0.000000,500.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,905,Tebuconazol,0.000000,180.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,912,Profenofos,0.000000,0.300000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,924,Acrilamida,0.000000,0.500000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,949,Sólidos Dissolvidos Totais,0.000000,500.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,989,"1,2-Dicloroetano",0.000000,5.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,1108,Microcistinas,0.000000,1.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,1109,Saxitoxinas,0.000000,3.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,1181,SUB - Radioatividade Alfa,0.000000,0.500000,Bq/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,1184,SUB - Radioatividade Beta,0.000000,1.000000,Bq/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,1190,pH,6.000000,9.000000,
+Portaria GM/MS Nº888 5/21,Agua Tratada,1207,Cloro Residual Livre,0.200000,5.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,2392,Ácidos Haloacéticos Totais,0.000000,0.080000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,2393,Xilenos,0.000000,500.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,2414,Benzeno,0.000000,5.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,2519,Cloraminas,0.000000,4.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,3871,Bromato,0.000000,0.010000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,3873,Cloretos,0.000000,250.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,3874,Clorito,0.000000,0.700000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,3877,SUB - Nitrato (como N),0.000000,10.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,3878,SUB - Nitrito (como N),0.000000,1.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,3880,Sulfato,0.000000,250.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,3904,Turbidez,0.000000,5.000000,NTU
+Portaria GM/MS Nº888 5/21,Agua Tratada,4100,Benzeno,0.000000,5.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,4131,Mancozebe,0.000000,8.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,4134,Epoxiconazol,0.000000,60.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,4275,Tiametoxan,0.000000,36.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,5679,Aldrin + dieldrin,0.000000,0.030000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,5680,Clordano (cis + trans),0.000000,0.200000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,5682,"DDT, todos os isômeros",0.000000,1.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,5838,Epicloridrina,0.000000,0.400000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,6015,SUB - Escherichia coli (UFC),0.000000,1.000000,UFC/100mL
+Portaria GM/MS Nº888 5/21,Agua Tratada,6178,Trihalometanos,0.000000,0.100000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,6486,Carbendazim,0.000000,120.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,6998,"1,4-Diclorobenzeno",0.000000,0.000300,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7001,"1,2-Diclorobenzeno",0.000000,0.001000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7003,Cloreto de Vinila,0.000000,0.500000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7011,Amônia (NH3-N),0.000000,1.200000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7138,SUB - Gosto e Odor,0.000000,6.000000,
+Portaria GM/MS Nº888 5/21,Agua Tratada,7166,Amônia (NH3-N),0.000000,1.200000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7171,Aldicarbe + Aldicarbe Sulfona + Aldicarbe Sulfóxido,0.000000,10.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7172,Clorpirifós + Clorpirifós-Oxon,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7173,"DDT (p,p- DDT+ p,p-DDD+ p,p- DDE)",0.000000,1.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7205,Sulfeto (H2S não dissociado),0.000000,0.050000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7271,"1,4-Dioxano",0.000000,48.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7272,Ametrina,0.000000,60.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7273,"Atrazina + S-Clorotriazinas (Deetil- Atrazina - Dea, Deisopropil-Atrazina - Dia e Diaminoclorotriazina-Dact)",0.000000,2.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7274,Ciproconazol,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7275,Difenoconazol,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7276,Dimetoato + Ometoato,0.000000,1.200000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7277,Fipronil,0.000000,1.200000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7278,Flutriafol,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7279,Hidroxi-Atrazina,0.000000,120.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7280,Mancozeb + ETU,0.000000,8.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7281,Metamidofós + Acefato,0.000000,7.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7282,Paraquate,0.000000,13.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7283,Picloram,0.000000,60.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7284,Propargito,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7285,Protioconazol + ProticonazolDestio,0.000000,3.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7286,Tiodicarbe,0.000000,90.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7287,Tiram,0.000000,6.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7288,Clorato,0.000000,0.700000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7289,N-nitrosodimetilamina,0.000000,0.000100,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7290,Cilindrospermopsinas,0.000000,1.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7291,Metribuzim,0.000000,25.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7324,Profenofós,0.000000,0.300000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,7865,Razão de Nitrito e Nitrato,0.000000,1.000000,
+Portaria GM/MS Nº888 5/21,Agua Tratada,7959,Sulfato,0.000000,250.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,8013,Radioatividade Alfa,0.000000,0.500000,Bq/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,8014,Radioatividade Beta,0.000000,1.000000,Bq/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,8020,Amônia,0.000000,1.500000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,8362,Mercúrio,0.000000,0.001000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,8702,Soma das razões (Nitrato e Nitrito),0.000000,1.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,8779,Dureza total,0.000000,300.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10496,Antimônio,0.000000,0.006000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10498,Alumínio,0.000000,1.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10500,Arsênio,0.000000,0.010000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10504,Bário,0.000000,0.700000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10508,Cádmio,0.000000,0.003000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10512,Chumbo,0.000000,0.010000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10515,Cromo,0.000000,0.050000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10516,Cobre,0.000000,2.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10525,Ferro,0.000000,0.300000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10528,Manganês,0.000000,0.100000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10531,Mercúrio,0.000000,0.001000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10534,Níquel,0.000000,0.070000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10544,Sódio,0.000000,200.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10546,Selênio,0.000000,0.040000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10550,Urânio,0.000000,0.030000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10554,Zinco,0.000000,5.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10662,Alumínio,0.000000,0.200000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10663,SUB - Cromo,0.000000,0.050000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10666,Chumbo,0.000000,0.010000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10668,Antimônio,0.000000,0.006000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10670,Arsênio,0.000000,0.010000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10671,Arsênio,0.000000,0.010000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10673,Bário,0.000000,0.700000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10674,Cádmio,0.000000,0.003000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10678,Cobre,0.000000,2.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10680,Níquel,0.000000,0.070000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10682,Selênio,0.000000,0.040000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10684,Urânio,0.000000,0.030000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10687,Ferro,0.000000,0.300000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10691,Manganês,0.000000,0.100000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10693,Sódio,0.000000,200.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10695,Zinco,0.000000,5.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10720,Mercúrio,0.000000,0.001000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,10862,Sólidos Dissolvidos Totais,0.000000,500.000000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11643,Ácidos Haloacéticos Totais,0.000000,0.080000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11648,"2,4-D",0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11649,Acrilamida,0.000000,0.500000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11891,Glifosato + AMPA,0.000000,500.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11892,Acrilamida,0.000000,0.500000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11893,Carbendazim,0.000000,120.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11894,"2,4-D",0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11898,Aldicarbe + Aldicarbe Sulfona + Aldicarbe Sulfóxido,0.000000,10.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11899,Ametrina,0.000000,60.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11900,"Atrazina + S-Clorotriazinas (Deetil- Atrazina - Dea, Deisopropil-Atrazina - Dia e Diaminoclorotriazina-Dact)",0.000000,2.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11901,Ciproconazol,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11902,Clorpirifós + Clorpirifós-Oxon,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11903,Difenoconazol,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11904,Dimetoato + Ometoato,0.000000,1.200000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11905,Epoxiconazol,0.000000,60.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11906,Fipronil,0.000000,1.200000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11907,Flutriafol,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11908,Hidroxi-Atrazina,0.000000,120.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11909,Metamidofós + Acefato,0.000000,7.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11910,Paraquate,0.000000,13.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11911,Picloram,0.000000,60.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11912,Profenofós,0.000000,0.300000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11913,Propargito,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11914,Protioconazol + ProticonazolDestio,0.000000,3.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11915,Tebuconazol,0.000000,180.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11916,Tiametoxan,0.000000,36.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11917,Tiodicarbe,0.000000,90.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11918,Tiram,0.000000,6.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11921,Carbofurano,0.000000,7.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11976,Acefato + Metamidofós,0.000000,7.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11977,Aldicarbe + Aldicarbe Sulfona + Aldicarbe Sulfóxido,0.000000,10.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11978,Carbendazim + Benomil,0.000000,120.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11979,Mancozebe + ETU,0.000000,8.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11980,Clorpirifós + Clorpirifós-oxon,0.000000,30.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11982,Tebuconazol,0.000000,180.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,11990,Glifosato+AMPA,0.000000,500.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15161,Fipronil,0.000000,1.200000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15201,Aldrin + dieldrin,0.000000,0.030000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15202,Glifosato+AMPA,0.000000,500.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15203,g-HCH (y-HCH ou gama-Lindano),0.000000,2.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15204,Malation,0.000000,60.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15205,Mancozebe + ETU,0.000000,8.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15206,Molinato,0.000000,6.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15207,Simazina,0.000000,2.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15208,Terbufos,0.000000,1.200000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15209,Tiametoxam,0.000000,36.000000,µg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15210,"1,4-Diclorobenzeno",0.000000,0.000300,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15211,Monoclorobenzeno,0.000000,0.020000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15349,SUB - Amônia,0.000000,1.200000,mg/L
+Portaria GM/MS Nº888 5/21,Agua Tratada,15428,Cilindrospermopsinas,0.000000,1.000000,µg/L
