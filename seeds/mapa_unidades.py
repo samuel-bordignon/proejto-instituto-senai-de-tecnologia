@@ -10,6 +10,8 @@ MAPA_LEGISLACAO: dict[str, str] = {
     "Portaria GM/MS 888/2021": "Portaria GM/MS 888/2021",
     "Portaria SES nº1468/2022": "Portaria SES/SC 1468/2022",
     "Portaria SES/SC 1468/2022": "Portaria SES/SC 1468/2022",
+    "Resolução CONAMA 430/2011": "Resolução CONAMA 430/2011",
+    "Resolução CONAMA 357/2005": "Resolução CONAMA 357/2005",
 }
 
 MAPA_ORIGEM_AMOSTRA: dict[str, str] = {
@@ -18,24 +20,33 @@ MAPA_ORIGEM_AMOSTRA: dict[str, str] = {
     "Água Tratada": "Água Tratada",
     "Água Superficial (Água doce)": "Água Superficial (Água doce)",
     "Água Subterrânea": "Água Subterrânea",
+    "Efluente Tratado": "Efluente Tratado",
 }
 
 # bruto -> padronizado. None = grandeza adimensional (fk_unidade_medida = NULL).
 MAPA_UNIDADES: dict[str, str | None] = {
     "µg/L": "µg/L",
+    "μg/L": "µg/L",
     "ug/L": "µg/L",
     "ppb": "µg/L",             # Decisão definida: ppb unificado em µg/L
     "mg/L": "mg/L",
+    "mL/L": "mL/L",
+    "°C": "°C",
+    "oC": "°C",
+    "FT": "FT",
     "Bq/L": "Bq/L",
     "UFC/100mL": "UFC/100mL",
     "NMP/100 mL": "NMP/100mL",
     "NMP/100mL": "NMP/100mL",
     "NTU": "NTU",
+    "UNT": "NTU",
     "Pt/Co": "Pt/Co",
+    "mg Pt/L": "Pt/Co",
+    "uH": "Pt/Co",
     "Intensidade": "Intensidade",
     "células/mL": "células/mL",
     "Aus/Pres em 100mL": None,
-    "": None,                  # Adimensionais: pH (793, 1190) e Razão de Nitrito e Nitrato (7865)
+    "": None,                  # Adimensionais/qualitativos: pH, Razão Nitrito/Nitrato, Mat. Flutuantes
 }
 
 # Exceções por id_num quando o PDF omitiu a unidade mas o ensaio possui unidade física/sensorial
