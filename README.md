@@ -15,11 +15,13 @@ proejto-instituto-senai-de-tecnologia/
 │   ├── repo/                          # Repositório de dados e fixtures mockadas da POC
 │   ├── services/                      # Serviços de aplicação (geração de PDF)
 │   └── ui/                            # Páginas (/login, /, /importar, /amostra/{codigo}, /analise) e componentes
-├── database/                          # Conexão PostgreSQL/Supabase (psycopg) e DDL oficial
+├── database/                          # Conexão PostgreSQL/Supabase (psycopg), DDL oficial e migrações
 │   ├── __init__.py                    # Exporta consultar_df(), executar_sql(), get_database_url()
 │   ├── connection.py                  # Conexão direta com Supabase (SQL puro)
-│   └── schema_laudotech.sql           # DDL SQL oficial (PostgreSQL v2.0)
-├── seeds/                             # Scripts SQL e mapas de normalização da base legal (GM/MS 888, SES-SC 1468)
+│   ├── schema_laudotech.sql           # DDL SQL oficial (PostgreSQL v2.2 — 18 tabelas)
+│   └── migrations/
+│       └── 001_migracao_v2_1.sql      # Migração idempotente v2.0 -> v2.2 + backfill de unidades
+├── seeds/                             # Scripts SQL de povoamento (Portarias 888/1468, CONAMA 430/357 e CT-01..CT-16)
 ├── .env.example                       # Modelo de configuração da variável DATABASE_URL
 └── requirements.txt                   # Dependências Python do projeto
 ```

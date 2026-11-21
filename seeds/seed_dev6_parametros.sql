@@ -747,4 +747,4 @@ JOIN origem_amostra o     ON o.nome = v.ori_nome
 JOIN legislacao_origem lo ON lo.fk_legislacao = l.id AND lo.fk_origem_amostra = o.id
 JOIN ensaios e            ON e.id_num = v.id_num
 LEFT JOIN unidade_medida u ON u.descricao = v.unid_desc
-ON CONFLICT (fk_legislacao_origem, fk_ensaios) DO NOTHING;
+ON CONFLICT (fk_legislacao_origem, fk_classe, fk_ensaios) DO NOTHING;
