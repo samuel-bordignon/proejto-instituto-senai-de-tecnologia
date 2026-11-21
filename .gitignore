@@ -3,6 +3,7 @@
 .env.*
 !.env.example
 .streamlit/secrets.toml
+.nicegui/
 
 # Bytecode e caches do Python
 __pycache__/
