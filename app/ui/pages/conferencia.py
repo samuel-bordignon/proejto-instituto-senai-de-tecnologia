@@ -29,7 +29,7 @@ from app.ui.components.badges import (
 from app.ui.components.grafico_historico import construir_figura_historico
 from app.ui.components.modal_historico import abrir_modal_historico
 from app.ui.layout import criar_shell, mostrar_toast_aviso, mostrar_toast_sucesso
-from app.ui.pdf_service import gerar_pdf_amostra
+from app.services.pdf_service import gerar_pdf_amostra
 
 
 def _escolher_ensaio_inicial(amostra: Amostra) -> int:
