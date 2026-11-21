@@ -7,9 +7,8 @@ from urllib.parse import quote
 from nicegui import app, events, ui
 
 from app.core.models import ResultadoPreLeitura, ResultadoPreLeituraLote
-from app.core.parser_ultralims import analisar_lote_ultralims
 from app.repo.demo_fixtures import gerar_lote_demonstracao
-from app.repo.mock_repo import CATALOGO_ENSAIOS, PARAMETROS_VMP, repo
+from app.repo.mock_repo import repo
 from app.ui.components.badges import status_pill_html
 from app.ui.layout import criar_shell, mostrar_toast_aviso, mostrar_toast_sucesso
 
@@ -560,16 +559,8 @@ def registrar_pagina_importar() -> None:
             async def _ao_enviar_arquivo(e: events.UploadEventArguments) -> None:
                 raw_bytes = await e.file.read()
                 nome = e.file.name
-                unidades_vmp_ref = {cod: p.unidade for (cod, _), p in PARAMETROS_VMP.items() if p.unidade}
-                codigos_com_vmp = {cod for (cod, _) in PARAMETROS_VMP.keys()}
                 try:
-                    lote = analisar_lote_ultralims(
-                        arquivo_bytes=raw_bytes,
-                        nome_arquivo=nome,
-                        catalogo_ensaios=CATALOGO_ENSAIOS,
-                        unidades_vmp_referencia=unidades_vmp_ref,
-                        codigos_com_vmp=codigos_com_vmp,
-                    )
+                    lote = repo.analisar_planilha(raw_bytes, nome)
                 except Exception as exc:
                     mostrar_toast_aviso(f"Não foi possível ler '{nome}': {exc}")
                     return
