@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from urllib.parse import quote, unquote
 
-from nicegui import app, ui
+from nicegui import ui
 
 from app.core.config import (
     GERAL_FAVORAVEL,
@@ -25,6 +25,12 @@ from app.ui.components.badges import (
     status_pill_html,
     variante_status_ensaio,
     variante_status_geral,
+)
+from app.ui.components.barra_lote import (
+    ItemAbaAmostra,
+    limpar_lote_sessao,
+    obter_lote_sessao,
+    renderizar_barra_abas_amostras,
 )
 from app.ui.components.grafico_historico import construir_figura_historico
 from app.ui.components.modal_historico import abrir_modal_historico
@@ -111,48 +117,34 @@ def registrar_pagina_conferencia() -> None:
             return estado["amostra"].ensaios[0]
 
         # Barra de abas de lote logo abaixo do header (quando veio de importação multi-amostra)
-        lote_sessao: list[str] = list(app.storage.user.get("lote_conferencia", []))
-        if codigo_decod not in lote_sessao:
-            lote_sessao = []
+        lote_sessao = obter_lote_sessao(codigo_decod)
+        if lote_sessao:
+            itens_lote: list[ItemAbaAmostra] = []
+            for cod_lote in lote_sessao:
+                am_tab = repo.obter_amostra(cod_lote)
+                st_g = am_tab.status_geral if am_tab else "Pendente"
+                cor_tab = (
+                    "#16A34A"
+                    if st_g == GERAL_FAVORAVEL
+                    else ("#DC2626" if st_g == GERAL_NAO_FAVORAVEL else "#D97706")
+                )
+                itens_lote.append(ItemAbaAmostra(codigo=cod_lote, cor_dot=cor_tab))
 
-        if len(lote_sessao) > 1:
-            with ui.row().classes(
-                "lt-sample-tabs-bar items-center justify-between gap-[16px] flex-wrap"
-            ):
-                with ui.row().classes("items-center gap-[12px] no-wrap overflow-x-auto"):
-                    ui.label("LOTE IMPORTADO").classes(
-                        "text-[10px] font-bold tracking-[0.5px] text-[#71717A] shrink-0"
-                    )
-                    with ui.tabs(
-                        value=codigo_decod,
-                        on_change=lambda e: ui.navigate.to(f"/amostra/{quote(str(e.value), safe='')}")
-                        if str(e.value) != codigo_decod
-                        else None,
-                    ).props(
-                        "dense align=left indicator-color=primary active-color=primary no-caps outside-arrows mobile-arrows"
-                    ).classes("lt-sample-tabs"):
-                        for cod_lote in lote_sessao:
-                            am_tab = repo.obter_amostra(cod_lote)
-                            st_g = am_tab.status_geral if am_tab else "Pendente"
-                            cor_tab = (
-                                "#16A34A"
-                                if st_g == GERAL_FAVORAVEL
-                                else ("#DC2626" if st_g == GERAL_NAO_FAVORAVEL else "#D97706")
-                            )
-                            with ui.tab(name=cod_lote, label=""):
-                                with ui.row().classes("items-center gap-[7px] no-wrap"):
-                                    ui.element("div").classes(
-                                        "w-[7px] h-[7px] rounded-full shrink-0"
-                                    ).style(f"background-color: {cor_tab};")
-                                    ui.label(cod_lote).classes("font-mono-lt text-[12px] font-bold")
+            def _fechar_barra_lote() -> None:
+                limpar_lote_sessao()
+                ui.navigate.to(f"/amostra/{quote(codigo_decod, safe='')}")
 
-                ui.button(
-                    icon="close",
-                    on_click=lambda: (
-                        app.storage.user.pop("lote_conferencia", None),
-                        ui.navigate.to(f"/amostra/{quote(codigo_decod, safe='')}"),
-                    ),
-                ).props("flat round dense").classes("text-[#71717A]").tooltip("Fechar barra do lote")
+            renderizar_barra_abas_amostras(
+                titulo_prefixo="LOTE IMPORTADO",
+                itens=itens_lote,
+                valor_ativo=codigo_decod,
+                on_select=lambda novo_cod: (
+                    ui.navigate.to(f"/amostra/{quote(novo_cod, safe='')}")
+                    if novo_cod != codigo_decod
+                    else None
+                ),
+                on_close=_fechar_barra_lote,
+            )
 
         with ui.column().classes(
             "w-full max-w-[1360px] mx-auto px-[24px] lg:px-[32px] py-[24px] gap-[18px]"

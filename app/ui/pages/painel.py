@@ -10,10 +10,9 @@ from app.core.config import (
     GERAL_FAVORAVEL,
     GERAL_NAO_FAVORAVEL,
     GERAL_PENDENTE,
-    STATUS_NAO_CONFORME,
-    STATUS_PENDENTE,
 )
 from app.core.models import Amostra
+from app.core.motor_conformidade import resumir_diagnostico_amostra
 from app.repo.mock_repo import repo
 from app.ui.components.badges import status_pill_html
 from app.ui.layout import criar_shell
@@ -21,30 +20,33 @@ from app.ui.layout import criar_shell
 
 def _montar_pills_diagnostico(amostra: Amostra) -> str:
     """Monta múltiplas pills StatusPillV3 para a coluna Diagnóstico da B2."""
+    diag = resumir_diagnostico_amostra(amostra)
     pills: list[str] = []
 
-    qtd_nc = sum(1 for e in amostra.ensaios if e.status == STATUS_NAO_CONFORME)
-    qtd_pend = sum(1 for e in amostra.ensaios if e.status == STATUS_PENDENTE)
-    tem_desvio = any(e.estatistica and e.estatistica.alerta_desvio for e in amostra.ensaios)
-    tem_unid_div = any(
-        any(av.motivo == "UNIDADE_DIVERGENTE" for av in e.avaliacoes.values())
-        for e in amostra.ensaios
-    )
-
-    if qtd_nc > 0:
-        label = f"{qtd_nc} NÃO CONFORME" if qtd_nc == 1 else f"{qtd_nc} NÃO CONFORMES"
+    if diag.qtd_nao_conformes > 0:
+        label = (
+            f"{diag.qtd_nao_conformes} NÃO CONFORME"
+            if diag.qtd_nao_conformes == 1
+            else f"{diag.qtd_nao_conformes} NÃO CONFORMES"
+        )
         pills.append(status_pill_html(label, "solid-red"))
-    elif qtd_pend == 0:
+    elif diag.favoravel:
         pills.append(status_pill_html("FAVORÁVEL", "solid-green"))
 
-    if qtd_pend > 0:
-        label = f"{qtd_pend} PENDENTE" if qtd_pend == 1 else f"{qtd_pend} PENDENTES"
-        pills.append(status_pill_html(label, "solid-amber" if qtd_nc == 0 else "outline-amber"))
+    if diag.qtd_pendentes > 0:
+        label = (
+            f"{diag.qtd_pendentes} PENDENTE"
+            if diag.qtd_pendentes == 1
+            else f"{diag.qtd_pendentes} PENDENTES"
+        )
+        pills.append(
+            status_pill_html(label, "solid-amber" if diag.qtd_nao_conformes == 0 else "outline-amber")
+        )
 
-    if tem_unid_div:
+    if diag.tem_unidade_divergente:
         pills.append(status_pill_html("UNID. DIVERGENTE", "outline-gray"))
 
-    if tem_desvio:
+    if diag.tem_desvio_historico:
         pills.append(status_pill_html("DESVIO > μ+0,20σ", "outline-amber"))
 
     return '<div class="flex flex-wrap items-center gap-[6px]">' + "".join(pills) + "</div>"

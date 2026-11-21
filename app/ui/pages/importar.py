@@ -4,12 +4,17 @@ from __future__ import annotations
 
 from urllib.parse import quote
 
-from nicegui import app, events, ui
+from nicegui import events, ui
 
 from app.core.models import ResultadoPreLeitura, ResultadoPreLeituraLote
 from app.repo.demo_fixtures import gerar_lote_demonstracao
 from app.repo.mock_repo import repo
 from app.ui.components.badges import status_pill_html
+from app.ui.components.barra_lote import (
+    ItemAbaAmostra,
+    definir_lote_sessao,
+    renderizar_barra_abas_amostras,
+)
 from app.ui.layout import criar_shell, mostrar_toast_aviso, mostrar_toast_sucesso
 
 
@@ -68,35 +73,21 @@ def registrar_pagina_importar() -> None:
             if not lote or not lote.amostras:
                 return
 
-            with ui.row().classes(
-                "lt-sample-tabs-bar items-center justify-between gap-[16px] flex-wrap"
-            ):
-                with ui.row().classes("items-center gap-[12px] no-wrap overflow-x-auto"):
-                    ui.label("AMOSTRAS DO ARQUIVO").classes(
-                        "text-[10px] font-bold tracking-[0.5px] text-[#71717A] shrink-0"
-                    )
-                    with ui.tabs(
-                        value=estado["amostra_ativa"],
-                        on_change=lambda e: _trocar_aba_amostra(str(e.value)),
-                    ).props(
-                        "dense align=left indicator-color=primary active-color=primary no-caps outside-arrows mobile-arrows"
-                    ).classes("lt-sample-tabs"):
-                        for am in lote.amostras:
-                            cod = am.codigo_amostra_principal
-                            cor_dot = "#D97706" if am.total_avisos > 0 else "#16A34A"
-                            with ui.tab(name=cod, label=""):
-                                with ui.row().classes("items-center gap-[7px] no-wrap"):
-                                    ui.element("div").classes(
-                                        "w-[7px] h-[7px] rounded-full shrink-0"
-                                    ).style(f"background-color: {cor_dot};")
-                                    ui.label(cod).classes("font-mono-lt text-[12px] font-bold")
-                                    ui.label(f"({am.total_mapeados})").classes(
-                                        "font-mono-lt text-[11px] font-normal text-[#71717A]"
-                                    )
-
-                ui.label(
-                    f"{len(lote.amostras)} amostra(s) detectada(s) em {lote.nome_arquivo}"
-                ).classes("text-[11px] text-[#71717A] py-[10px]")
+            itens_abas = [
+                ItemAbaAmostra(
+                    codigo=am.codigo_amostra_principal,
+                    cor_dot="#D97706" if am.total_avisos > 0 else "#16A34A",
+                    sufixo=f"({am.total_mapeados})",
+                )
+                for am in lote.amostras
+            ]
+            renderizar_barra_abas_amostras(
+                titulo_prefixo="AMOSTRAS DO ARQUIVO",
+                itens=itens_abas,
+                valor_ativo=estado["amostra_ativa"],
+                on_select=_trocar_aba_amostra,
+                texto_direita=f"{len(lote.amostras)} amostra(s) detectada(s) em {lote.nome_arquivo}",
+            )
 
         render_barra_abas_amostras()
 
@@ -685,7 +676,7 @@ def registrar_pagina_importar() -> None:
                     normas_selecionadas=pares,
                 )
                 codigos_lote = [a.codigo for a in criadas]
-                app.storage.user["lote_conferencia"] = codigos_lote
+                definir_lote_sessao(codigos_lote)
 
                 # Abre na amostra que estava ativa na aba (ou a primeira criada)
                 destino = codigos_lote[0]

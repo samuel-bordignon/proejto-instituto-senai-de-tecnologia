@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass
 from typing import Optional
 
 from app.core.config import (
@@ -255,3 +256,32 @@ def definir_sinalizacao_ensaio(ensaio: EnsaioResultado) -> tuple[Optional[str], 
         return "LIMITE SUPERIOR (>LS)", "amber"
 
     return None, None
+
+
+@dataclass(frozen=True)
+class ResumoDiagnosticoAmostra:
+    """Resumo agregado de domínio para exibição de diagnósticos no Painel (B2)."""
+
+    qtd_nao_conformes: int
+    qtd_pendentes: int
+    favoravel: bool
+    tem_unidade_divergente: bool
+    tem_desvio_historico: bool
+
+
+def resumir_diagnostico_amostra(amostra: Amostra) -> ResumoDiagnosticoAmostra:
+    """Calcula os contadores e sinalizações agregadas de conformidade de uma amostra."""
+    qtd_nc = sum(1 for e in amostra.ensaios if e.status == STATUS_NAO_CONFORME)
+    qtd_pend = sum(1 for e in amostra.ensaios if e.status == STATUS_PENDENTE)
+    tem_desvio = any(e.estatistica and e.estatistica.alerta_desvio for e in amostra.ensaios)
+    tem_unid_div = any(
+        any(av.motivo == "UNIDADE_DIVERGENTE" for av in e.avaliacoes.values())
+        for e in amostra.ensaios
+    )
+    return ResumoDiagnosticoAmostra(
+        qtd_nao_conformes=qtd_nc,
+        qtd_pendentes=qtd_pend,
+        favoravel=(qtd_nc == 0 and qtd_pend == 0),
+        tem_unidade_divergente=tem_unid_div,
+        tem_desvio_historico=tem_desvio,
+    )
