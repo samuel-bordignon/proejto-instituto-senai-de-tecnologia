@@ -40,6 +40,8 @@ def interpretar_valor_bruto(bruto: Optional[str]) -> tuple[str, Optional[str], O
     Retorna (tipo, qualificador, valor_numerico):
       tipo ∈ {'ignorado', 'numerico', 'qualitativo'}
     """
+
+    # Casos de ensaios ignorados
     if bruto is None:
         return "ignorado", None, None
     texto = str(bruto).strip()
