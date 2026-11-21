@@ -16,17 +16,19 @@ from app.core.models import Amostra, AvaliacaoNorma, EnsaioResultado, ParametroN
 
 
 def normalizar_unidade(unidade: Optional[str]) -> str:
-    """Normaliza sinônimos 1:1 de unidades sem converter escalas (RN-05)."""
+    """Normaliza sinônimos 1:1 de unidades sem converter escalas (RN-05), alinhado a seeds/mapa_unidades.py."""
     u = (unidade or "").strip()
     mapa = {
         "ug/L": "µg/L",
         "μg/L": "µg/L",
         "ppb": "µg/L",
         "UNT": "NTU",
+        "NMP/100 mL": "NMP/100mL",
         "mg Pt/L": "Pt/Co",
         "uH": "Pt/Co",
         "°C": "°C",
         "oC": "°C",
+        "Aus/Pres em 100mL": "",
     }
     return mapa.get(u, u)
 

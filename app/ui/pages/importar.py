@@ -7,10 +7,8 @@ from urllib.parse import quote
 from nicegui import app, events, ui
 
 from app.core.models import ResultadoPreLeitura, ResultadoPreLeituraLote
-from app.core.parser_ultralims import (
-    analisar_lote_ultralims,
-    gerar_lote_demonstracao,
-)
+from app.core.parser_ultralims import analisar_lote_ultralims
+from app.repo.demo_fixtures import gerar_lote_demonstracao
 from app.repo.mock_repo import CATALOGO_ENSAIOS, PARAMETROS_VMP, repo
 from app.ui.components.badges import status_pill_html
 from app.ui.layout import criar_shell, mostrar_toast_aviso, mostrar_toast_sucesso
@@ -572,8 +570,9 @@ def registrar_pagina_importar() -> None:
                         unidades_vmp_referencia=unidades_vmp_ref,
                         codigos_com_vmp=codigos_com_vmp,
                     )
-                except Exception:
-                    lote = gerar_lote_demonstracao(nome_arquivo=nome)
+                except Exception as exc:
+                    mostrar_toast_aviso(f"Não foi possível ler '{nome}': {exc}")
+                    return
                 _aplicar_lote(lote)
 
             def _carregar_demo() -> None:
