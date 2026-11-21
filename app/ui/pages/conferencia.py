@@ -9,7 +9,6 @@ from nicegui import ui
 from app.core.config import (
     GERAL_FAVORAVEL,
     GERAL_NAO_FAVORAVEL,
-    STATUS_CONFORME,
     STATUS_NAO_CONFORME,
     STATUS_PENDENTE,
 )
@@ -20,12 +19,9 @@ from app.core.motor_conformidade import (
     gerar_parecer_automatico,
 )
 from app.repo.mock_repo import repo
+from app.services.pdf_service import gerar_pdf_amostra
 from app.ui.auth import obter_usuario_logado
-from app.ui.components.badges import (
-    status_pill_html,
-    variante_status_ensaio,
-    variante_status_geral,
-)
+from app.ui.components.badges import status_pill_html, variante_status_geral
 from app.ui.components.barra_lote import (
     ItemAbaAmostra,
     limpar_lote_sessao,
@@ -34,8 +30,11 @@ from app.ui.components.barra_lote import (
 )
 from app.ui.components.grafico_historico import construir_figura_historico
 from app.ui.components.modal_historico import abrir_modal_historico
+from app.ui.components.tabela_ensaios import (
+    criar_tabela_ensaios,
+    montar_rows_tabela_ensaios,
+)
 from app.ui.layout import criar_shell, mostrar_toast_aviso, mostrar_toast_sucesso
-from app.services.pdf_service import gerar_pdf_amostra
 
 
 def _escolher_ensaio_inicial(amostra: Amostra) -> int:
@@ -50,35 +49,6 @@ def _escolher_ensaio_inicial(amostra: Amostra) -> int:
         if e.status == STATUS_PENDENTE:
             return e.codigo
     return amostra.ensaios[0].codigo if amostra.ensaios else 0
-
-
-def _montar_rows_tabela(amostra: Amostra, ensaio_selecionado: int) -> list[dict]:
-    rows: list[dict] = []
-    for e in amostra.ensaios:
-        variante_st = variante_status_ensaio(e.status)
-        pill_st = status_pill_html(f"{e.status.upper()} ▾", variante_st, clickable=True)
-
-        if e.sinalizacao and e.sinalizacao_tipo:
-            pill_sinal = status_pill_html(e.sinalizacao, f"outline-{e.sinalizacao_tipo}")  # type: ignore[arg-type]
-        else:
-            pill_sinal = '<span class="text-[12px] text-[#71717A]">—</span>'
-
-        row: dict = {
-            "codigo": e.codigo,
-            "nome": e.nome,
-            "resultado": e.resultado_formatado,
-            "is_nc": e.status == STATUS_NAO_CONFORME,
-            "is_active": e.codigo == ensaio_selecionado,
-            "status": e.status,
-            "status_html": pill_st,
-            "sinalizacao_html": pill_sinal,
-            "observacao": e.observacao,
-        }
-        for idx, norma in enumerate(amostra.normas):
-            av = e.avaliacoes.get(norma.id)
-            row[f"norma_{idx}"] = av.vmp_texto if av else "—"
-        rows.append(row)
-    return rows
 
 
 def registrar_pagina_conferencia() -> None:
@@ -149,9 +119,7 @@ def registrar_pagina_conferencia() -> None:
         with ui.column().classes(
             "w-full max-w-[1360px] mx-auto px-[24px] lg:px-[32px] py-[24px] gap-[18px]"
         ):
-            # =================================================================
             # 1. Cabeçalho de Ações (Voltar, Código, Histórico, PDF, Salvar)
-            # =================================================================
             @ui.refreshable
             def render_cabecalho() -> None:
                 am: Amostra = estado["amostra"]
@@ -180,7 +148,6 @@ def registrar_pagina_conferencia() -> None:
                                 f"{am.cliente} · {am.local_coleta} · {am.origem} · Coleta {am.data_coleta.strftime('%d/%m/%Y')}"
                             ).classes("text-[12px] text-[#71717A]")
 
-                    # Exatamente os 3 botões especificados na Seção 6.5 (sem Copiar e sem XLSX)
                     with ui.row().classes("items-center gap-[10px] flex-wrap"):
                         ui.button(
                             f"Histórico ({len(am.logs)})",
@@ -204,9 +171,7 @@ def registrar_pagina_conferencia() -> None:
                             on_click=lambda: _salvar_conferencia(),
                         ).props("unelevated no-caps").classes("lt-btn-primary")
 
-            # =================================================================
-            # 2. Card Gráfico Histórico por Ensaio (ui.plotly + linha de μ!)
-            # =================================================================
+            # 2. Card Gráfico Histórico por Ensaio (ui.plotly + linha de μ)
             @ui.refreshable
             def render_card_grafico() -> None:
                 ensaio = _obter_ensaio(estado["ensaio_selecionado"])
@@ -230,28 +195,18 @@ def registrar_pagina_conferencia() -> None:
                                     sanitize=False,
                                 )
 
-                        # 4 métricas estatísticas inline (idêntico ao Figma B4)
                         with ui.row().classes("items-center gap-[16px] flex-wrap"):
-                            with ui.row().classes("items-baseline gap-[4px] no-wrap"):
-                                ui.label("Média (μ):").classes("text-[12px] text-[#71717A]")
-                                ui.label(meta["media"]).classes(
-                                    "font-mono-lt text-[12px] font-bold text-[#111827]"
-                                )
-                            with ui.row().classes("items-baseline gap-[4px] no-wrap"):
-                                ui.label("Desvio (σ):").classes("text-[12px] text-[#71717A]")
-                                ui.label(meta["sigma"]).classes(
-                                    "font-mono-lt text-[12px] font-bold text-[#111827]"
-                                )
-                            with ui.row().classes("items-baseline gap-[4px] no-wrap"):
-                                ui.label("Limiar μ+0,20σ:").classes("text-[12px] text-[#71717A]")
-                                ui.label(meta["limiar"]).classes(
-                                    "font-mono-lt text-[12px] font-bold text-[#111827]"
-                                )
-                            with ui.row().classes("items-baseline gap-[4px] no-wrap"):
-                                ui.label(meta["vmp_label"]).classes("text-[12px] text-[#71717A]")
-                                ui.label(meta["vmp_texto"]).classes(
-                                    "font-mono-lt text-[12px] font-bold text-[#111827]"
-                                )
+                            for rotulo, valor in [
+                                ("Média (μ):", meta["media"]),
+                                ("Desvio (σ):", meta["sigma"]),
+                                ("Limiar μ+0,20σ:", meta["limiar"]),
+                                (meta["vmp_label"], meta["vmp_texto"]),
+                            ]:
+                                with ui.row().classes("items-baseline gap-[4px] no-wrap"):
+                                    ui.label(rotulo).classes("text-[12px] text-[#71717A]")
+                                    ui.label(valor).classes(
+                                        "font-mono-lt text-[12px] font-bold text-[#111827]"
+                                    )
 
                     if meta.get("aviso_historico"):
                         with ui.row().classes(
@@ -267,140 +222,19 @@ def registrar_pagina_conferencia() -> None:
                     fig_dict["config"] = {"displayModeBar": False, "responsive": True}
                     ui.plotly(fig_dict).classes("w-full")
 
-            # Renderiza Cabeçalho e Card Gráfico antes da tabela
             render_cabecalho()
             render_card_grafico()
 
-            # =================================================================
-            # 3. Tabela de Ensaios (1–3 normas, clique na linha + menu Status)
-            # =================================================================
-            normas_cols_meta = [
-                {
-                    "name": f"norma_{i}",
-                    "label": n.titulo_coluna.upper(),
-                    "field": f"norma_{i}",
-                    "align": "left",
-                }
-                for i, n in enumerate(amostra.normas)
-            ]
-
-            columns = (
-                [
-                    {"name": "codigo", "label": "CÓD.", "field": "codigo", "align": "left"},
-                    {"name": "nome", "label": "ENSAIO", "field": "nome", "align": "left"},
-                    {"name": "resultado", "label": "RESULTADO", "field": "resultado", "align": "left"},
-                ]
-                + normas_cols_meta
-                + [
-                    {"name": "status", "label": "STATUS", "field": "status", "align": "left"},
-                    {"name": "sinalizacao", "label": "SINALIZAÇÃO", "field": "sinalizacao_html", "align": "left"},
-                    {"name": "observacao", "label": "OBSERVAÇÃO", "field": "observacao", "align": "left"},
-                ]
+            # 3. Tabela de Ensaios (1–3 normas, clique na linha + menu Status + observação inline)
+            tabela = criar_tabela_ensaios(
+                amostra=amostra,
+                ensaio_selecionado=estado["ensaio_selecionado"],
+                on_select_row=lambda e: _ao_selecionar_linha(e),
+                on_status_change=lambda e: _ao_mudar_status(e),
+                on_obs_change=lambda e: _ao_mudar_observacao(e),
             )
 
-            # Larguras responsivas adaptadas para 1, 2 ou 3 normas (Seção 6.5!)
-            n_normas = len(amostra.normas)
-            w_norma_min = "128px" if n_normas == 3 else "148px"
-            norma_tds = "\n".join(
-                f"""
-                <q-td key="norma_{i}" :props="props" style="min-width:{w_norma_min};">
-                  <span class="font-mono-lt text-[12px] text-[#52525B]">{{{{ props.row.norma_{i} }}}}</span>
-                </q-td>
-                """
-                for i in range(n_normas)
-            )
-
-            tabela = (
-                ui.table(
-                    columns=columns,
-                    rows=_montar_rows_tabela(amostra, estado["ensaio_selecionado"]),
-                    row_key="codigo",
-                    pagination={"rowsPerPage": 0},
-                )
-                .props("flat hide-bottom")
-                .classes("w-full lt-table")
-            )
-
-            # Slot #body com:
-            #  - Clique na linha -> seleciona ensaio do gráfico (com borda azul à esquerda)
-            #  - Clique na célula Status -> abre q-menu com Conforme / Não conforme / Pendente (Seção 5.3 / 8.3)
-            #  - Input inline na coluna Observação
-            tabela.add_slot(
-                "body",
-                f"""
-                <q-tr
-                  :props="props"
-                  :class="props.row.is_active ? 'lt-row-active cursor-pointer' : 'cursor-pointer'"
-                  @click="$parent.$emit('select_row', props.row.codigo)"
-                >
-                  <q-td key="codigo" :props="props" style="width:68px;">
-                    <span :class="props.row.is_active ? 'font-mono-lt text-[12px] font-bold text-[#111827]' : 'font-mono-lt text-[12px] font-medium text-[#52525B]'">
-                      {{{{ props.row.codigo }}}}
-                    </span>
-                  </q-td>
-
-                  <q-td key="nome" :props="props" style="min-width:180px;">
-                    <span :class="props.row.is_active ? 'text-[13px] font-bold text-[#111827]' : 'text-[13px] font-medium text-[#111827]'">
-                      {{{{ props.row.nome }}}}
-                    </span>
-                  </q-td>
-
-                  <q-td key="resultado" :props="props" style="min-width:118px;">
-                    <span :class="props.row.is_nc ? 'font-mono-lt text-[12px] font-bold text-[#DC2626]' : 'font-mono-lt text-[12px] font-medium text-[#111827]'">
-                      {{{{ props.row.resultado }}}}
-                    </span>
-                  </q-td>
-
-                  {norma_tds}
-
-                  <q-td key="status" :props="props" style="min-width:155px;" @click.stop>
-                    <div class="inline-block">
-                      <div v-html="props.row.status_html"></div>
-                      <q-menu auto-close anchor="bottom left" self="top left" :offset="[0, 6]">
-                        <q-list dense style="min-width: 175px; padding: 4px;">
-                          <q-item clickable v-close-popup @click="$parent.$emit('status_change', {{ codigo: props.row.codigo, status: '{STATUS_CONFORME}' }})" class="rounded-[6px]">
-                            <q-item-section avatar style="min-width:22px; padding-right:6px;">
-                              <span style="width:8px; height:8px; border-radius:999px; background:#16A34A; display:inline-block;"></span>
-                            </q-item-section>
-                            <q-item-section class="text-[12px] font-semibold text-[#111827]">Conforme</q-item-section>
-                          </q-item>
-                          <q-item clickable v-close-popup @click="$parent.$emit('status_change', {{ codigo: props.row.codigo, status: '{STATUS_NAO_CONFORME}' }})" class="rounded-[6px]">
-                            <q-item-section avatar style="min-width:22px; padding-right:6px;">
-                              <span style="width:8px; height:8px; border-radius:999px; background:#DC2626; display:inline-block;"></span>
-                            </q-item-section>
-                            <q-item-section class="text-[12px] font-semibold text-[#111827]">Não conforme</q-item-section>
-                          </q-item>
-                          <q-item clickable v-close-popup @click="$parent.$emit('status_change', {{ codigo: props.row.codigo, status: '{STATUS_PENDENTE}' }})" class="rounded-[6px]">
-                            <q-item-section avatar style="min-width:22px; padding-right:6px;">
-                              <span style="width:8px; height:8px; border-radius:999px; background:#D97706; display:inline-block;"></span>
-                            </q-item-section>
-                            <q-item-section class="text-[12px] font-semibold text-[#111827]">Pendente</q-item-section>
-                          </q-item>
-                        </q-list>
-                      </q-menu>
-                    </div>
-                  </q-td>
-
-                  <q-td key="sinalizacao" :props="props" style="min-width:158px;">
-                    <div v-html="props.row.sinalizacao_html"></div>
-                  </q-td>
-
-                  <q-td key="observacao" :props="props" style="min-width:140px;" @click.stop>
-                    <input
-                      type="text"
-                      class="lt-obs-input"
-                      :value="props.row.observacao"
-                      placeholder="—"
-                      @change="$parent.$emit('obs_change', {{ codigo: props.row.codigo, obs: $event.target.value }})"
-                    />
-                  </q-td>
-                </q-tr>
-                """,
-            )
-
-            # =================================================================
             # 4. Card Conclusão da Amostra (Parecer Técnico Editável)
-            # =================================================================
             @ui.refreshable
             def render_card_parecer() -> None:
                 am: Amostra = estado["amostra"]
@@ -435,9 +269,9 @@ def registrar_pagina_conferencia() -> None:
                         "w-full lt-textarea text-[13px] text-[#111827]"
                     )
 
-            # --- Handlers de Eventos da Tela B4 ---
+            # --- Handlers ---
             def _sincronizar_tabela() -> None:
-                tabela.rows = _montar_rows_tabela(
+                tabela.rows = montar_rows_tabela_ensaios(
                     estado["amostra"], estado["ensaio_selecionado"]
                 )
                 tabela.update()
@@ -462,7 +296,6 @@ def registrar_pagina_conferencia() -> None:
                 ensaio.sinalizacao = sinal
                 ensaio.sinalizacao_tipo = sinal_tipo  # type: ignore[arg-type]
 
-                # Recalcula status geral derivado (Seção 5.1) e regenera parecer (Seção 12.3)
                 estado["amostra"].status_geral = calcular_status_geral(estado["amostra"].ensaios)  # type: ignore[assignment]
                 estado["amostra"].parecer = gerar_parecer_automatico(estado["amostra"])
                 estado["dirty"] = True
@@ -520,9 +353,4 @@ def registrar_pagina_conferencia() -> None:
                 )
                 mostrar_toast_sucesso("Arquivo exportado com sucesso")
 
-            tabela.on("select_row", _ao_selecionar_linha)
-            tabela.on("status_change", _ao_mudar_status)
-            tabela.on("obs_change", _ao_mudar_observacao)
-
-            # Renderiza Card Conclusão / Parecer logo abaixo da tabela
             render_card_parecer()
