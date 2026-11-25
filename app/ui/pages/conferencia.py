@@ -18,7 +18,7 @@ from app.core.motor_conformidade import (
     definir_sinalizacao_ensaio,
     gerar_parecer_automatico,
 )
-from app.repo.mock_repo import repo
+from app.repo import repo
 from app.services.pdf_service import gerar_pdf_amostra
 from app.ui.auth import obter_usuario_logado
 from app.ui.components.badges import status_pill_html, variante_status_geral

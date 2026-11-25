@@ -7,8 +7,7 @@ from urllib.parse import quote
 from nicegui import events, ui
 
 from app.core.models import ResultadoPreLeitura, ResultadoPreLeituraLote
-from app.repo.demo_fixtures import gerar_lote_demonstracao
-from app.repo.mock_repo import repo
+from app.repo import repo
 from app.ui.components.badges import status_pill_html
 from app.ui.components.barra_lote import (
     ItemAbaAmostra,
@@ -122,14 +121,7 @@ def registrar_pagina_importar() -> None:
                                 "text-[16px] font-bold text-[#111827]"
                             )
 
-                        if not pre:
-                            ui.button(
-                                "Carregar planilha de demonstração (3 amostras)",
-                                icon="science",
-                                color="white",
-                                on_click=_carregar_demo,
-                            ).props("unelevated no-caps").classes("lt-btn-secondary")
-                        else:
+                        if pre:
                             ui.button(
                                 "Trocar arquivo",
                                 icon="refresh",
@@ -263,9 +255,6 @@ def registrar_pagina_importar() -> None:
                     mostrar_toast_aviso(f"Não foi possível ler '{nome}': {exc}")
                     return
                 _aplicar_lote(lote)
-
-            def _carregar_demo() -> None:
-                _aplicar_lote(gerar_lote_demonstracao())
 
             def _limpar_arquivo() -> None:
                 estado["lote"] = None

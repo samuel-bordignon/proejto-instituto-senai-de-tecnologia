@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from nicegui import app, ui
 
-from app.repo.mock_repo import repo
+from app.repo import repo
 from app.ui.auth import login_usuario
 from app.ui.theme import aplicar_tema_global
 

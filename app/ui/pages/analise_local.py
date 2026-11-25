@@ -7,7 +7,7 @@ from urllib.parse import quote
 from nicegui import ui
 
 from app.core.models import GrupoEnsaioLocal
-from app.repo.mock_repo import repo
+from app.repo import repo
 from app.ui.components.grafico_evolucao import construir_option_evolucao_conformidade
 from app.ui.components.tabela_dinamica_local import renderizar_tabela_dinamica_local
 from app.ui.layout import criar_shell
