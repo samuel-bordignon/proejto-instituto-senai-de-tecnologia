@@ -170,8 +170,10 @@ class ResultadoPreLeitura(BaseModel):
     nome_arquivo: str
     amostras_detectadas: int = 1
     codigo_amostra_principal: str
+    codigo_externo: Optional[str] = None
     data_coleta: date
     data_conclusao: Optional[date] = None
+    duplicada: bool = False
     total_mapeados: int = 0
     total_sem_vmp: int = 0
     total_ignorados: int = 0

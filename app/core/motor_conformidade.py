@@ -20,18 +20,62 @@ def normalizar_unidade(unidade: Optional[str]) -> str:
     """Normaliza sinônimos 1:1 de unidades sem converter escalas (RN-05), alinhado a seeds/mapa_unidades.py."""
     u = (unidade or "").strip()
     mapa = {
-        "ug/L": "µg/L",
+        "µg/L": "µg/L",
         "μg/L": "µg/L",
+        "ug/L": "µg/L",
         "ppb": "µg/L",
-        "UNT": "NTU",
+        "mg/L": "mg/L",
+        "mL/L": "mL/L",
+        "°C": "°C",
+        "ºC": "°C",
+        "oC": "°C",
+        "FT": "FT",
+        "Bq/L": "Bq/L",
+        "UFC/100mL": "UFC/100mL",
+        "UFC/100 mL": "UFC/100mL",
         "NMP/100 mL": "NMP/100mL",
+        "NMP/100mL": "NMP/100mL",
+        "NTU": "NTU",
+        "UNT": "NTU",
+        "Pt/Co": "Pt/Co",
         "mg Pt/L": "Pt/Co",
         "uH": "Pt/Co",
-        "°C": "°C",
-        "oC": "°C",
+        "Intensidade": "Intensidade",
+        "células/mL": "células/mL",
         "Aus/Pres em 100mL": "",
+        "": "",
     }
     return mapa.get(u, u)
+
+
+def tem_sujeira_numerica(bruto: Optional[str]) -> tuple[bool, Optional[str]]:
+    """
+    Detecta sujeira real de formatação numérica no export UltraLIMS (RN-01 / CT-10).
+    Retorna (True, motivo) apenas para espaços extras nas extremidades ou separadores de milhar
+    (' 1.408,00', '>2.500.000.000'). Vírgula decimal PT-BR padrão ('7,91', '<0,060') NÃO gera aviso.
+    """
+    if bruto is None:
+        return False, None
+    texto = str(bruto)
+    limpo = texto.strip()
+    if not limpo:
+        return False, None
+
+    motivos: list[str] = []
+    if texto != limpo:
+        motivos.append("espaços extras")
+
+    corpo = limpo[1:].strip() if limpo[0] in ("<", ">") else limpo
+    token_num = corpo.split()[0] if corpo else ""
+
+    if "," in token_num and "." in token_num:
+        motivos.append("separador de milhar '.' com vírgula decimal")
+    elif token_num.count(".") > 1:
+        motivos.append("múltiplos separadores de milhar '.'")
+
+    if not motivos:
+        return False, None
+    return True, " + ".join(motivos)
 
 
 def interpretar_valor_bruto(bruto: Optional[str]) -> tuple[str, Optional[str], Optional[float]]:
@@ -105,15 +149,15 @@ def avaliar_parametro(
     if tipo_avaliacao == "MANUAL_TECNICA" or parametro.operador == "MANUAL":
         return None, "MANUAL_TECNICA"
 
-    u_ensaio = normalizar_unidade(unidade_ensaio)
-    u_param = normalizar_unidade(parametro.unidade)
-    if u_ensaio and u_param and u_ensaio != u_param:
-        return None, "UNIDADE_DIVERGENTE"
-
     if parametro.operador == "AUSENCIA":
         esperado = (parametro.valor_esperado or "Ausente").strip().lower()
         ok = (valor_bruto or "").strip().lower() == esperado
         return ok, "AVALIADO"
+
+    u_ensaio = normalizar_unidade(unidade_ensaio)
+    u_param = normalizar_unidade(parametro.unidade)
+    if u_ensaio != u_param:
+        return None, "UNIDADE_DIVERGENTE"
 
     _, q, v = interpretar_valor_bruto(valor_bruto)
 

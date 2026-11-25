@@ -2,15 +2,36 @@
 
 from __future__ import annotations
 
+import calendar
 import math
+from datetime import date
 from typing import Optional
 
 from app.core.config import (
     FATOR_DESVIO_PADRAO_K,
+    JANELA_MESES,
     MAX_RESULTADOS_HISTORICO,
     MIN_AMOSTRAS_HISTORICO,
+    STATUS_PENDENTE,
 )
 from app.core.models import EstatisticaHistorica, PontoHistorico
+
+
+_MENSAGEM_AVISO_LQ_LS = (
+    "Resultado expresso em limite de quantificação (<LQ/>LS) — "
+    "recomenda-se verificação técnica da sensibilidade do método."
+)
+
+
+def _subtrair_meses(data_ref: date, meses: int) -> date:
+    """Subtrai `meses` calendário preservando o último dia válido do mês destino."""
+    ano = data_ref.year
+    mes = data_ref.month - meses
+    while mes <= 0:
+        mes += 12
+        ano -= 1
+    ultimo_dia = calendar.monthrange(ano, mes)[1]
+    return date(ano, mes, min(data_ref.day, ultimo_dia))
 
 
 def calcular_estatistica_historica(
@@ -19,24 +40,47 @@ def calcular_estatistica_historica(
     qualificador_atual: Optional[str] = None,
     operador: str = "MENOR_IGUAL",
     k: float = FATOR_DESVIO_PADRAO_K,
+    status_conformidade: Optional[str] = None,
+    data_referencia: Optional[date] = None,
+    janela_meses: int = JANELA_MESES,
+    max_resultados: int = MAX_RESULTADOS_HISTORICO,
+    min_amostras: int = MIN_AMOSTRAS_HISTORICO,
 ) -> EstatisticaHistorica:
     """
     Avalia desvio histórico por (local_coleta, ensaio) usando até os últimos 6
-    resultados anteriores dentro da janela de 6 meses (RN-08).
-    Exige n >= 3 medições numéricas anteriores e σ > 0.
+    resultados anteriores dentro da janela calendário de 6 meses (RN-08 / CT-15).
+    Exige n >= 3 medições numéricas anteriores.
+
+    Sinalização <LQ/>LS (RN-09 / CT-14): o aviso textual de reavaliação da
+    sensibilidade do método é emitido somente quando o resultado atual possui
+    qualificador '<' ou '>' E (gera alerta de desvio OU está Pendente no VMP).
     """
-    anteriores = [
-        p.valor_numerico
-        for p in pontos
-        if not p.is_atual and p.valor_numerico is not None
-    ][-MAX_RESULTADOS_HISTORICO:]
+    ref = data_referencia
+    if ref is None:
+        atual_pts = [p.data_coleta for p in pontos if p.is_atual]
+        if atual_pts:
+            ref = max(atual_pts)
+
+    candidatos = [p for p in pontos if not p.is_atual and p.valor_numerico is not None]
+    if ref is not None and janela_meses > 0:
+        data_corte = _subtrair_meses(ref, janela_meses)
+        candidatos = [p for p in candidatos if data_corte <= p.data_coleta < ref]
+
+    candidatos.sort(key=lambda p: p.data_coleta)
+    anteriores = [float(p.valor_numerico) for p in candidatos[-max_resultados:] if p.valor_numerico is not None]
 
     n = len(anteriores)
-    if n < MIN_AMOSTRAS_HISTORICO:
+    if n < min_amostras:
+        aviso_lq = (
+            _MENSAGEM_AVISO_LQ_LS
+            if qualificador_atual in ("<", ">") and status_conformidade == STATUS_PENDENTE
+            else None
+        )
         return EstatisticaHistorica(
             n_anteriores=n,
             alerta_desvio=False,
             motivo="HISTORICO_INSUFICIENTE",
+            aviso_lq_ls=aviso_lq,
         )
 
     media = sum(anteriores) / n
@@ -52,6 +96,12 @@ def calcular_estatistica_historica(
     if valor_atual is not None:
         if sigma == 0:
             if operador in ("MENOR_IGUAL", "MENOR_ESTRITO") and valor_atual > media:
+                alerta = True
+                motivo = "VARIACAO_SOBRE_SERIE_CONSTANTE"
+            elif operador == "MAIOR_IGUAL" and valor_atual < media:
+                alerta = True
+                motivo = "VARIACAO_SOBRE_SERIE_CONSTANTE"
+            elif operador == "FAIXA" and valor_atual != media:
                 alerta = True
                 motivo = "VARIACAO_SOBRE_SERIE_CONSTANTE"
             else:
@@ -71,11 +121,8 @@ def calcular_estatistica_historica(
                     motivo = "FORA_DA_FAIXA_HISTORICA"
 
     aviso_lq_ls = None
-    if qualificador_atual in ("<", ">") and (alerta or qualificador_atual == "<"):
-        aviso_lq_ls = (
-            "Resultado expresso em limite de quantificação (<LQ/>LS) — "
-            "recomenda-se verificação técnica da sensibilidade do método."
-        )
+    if qualificador_atual in ("<", ">") and (alerta or status_conformidade == STATUS_PENDENTE):
+        aviso_lq_ls = _MENSAGEM_AVISO_LQ_LS
 
     return EstatisticaHistorica(
         media=round(media, 4),
