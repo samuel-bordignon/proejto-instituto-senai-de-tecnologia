@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import dataclass, field
 import io
 import re
 from datetime import date, datetime
@@ -44,22 +45,73 @@ def _parse_data_celula(val: Any) -> Optional[date]:
     return None
 
 
+@dataclass(frozen=True)
+class MapaCabecalhoUltraLIMS:
+    """
+    Resultado do pré-processamento único do cabeçalho da planilha UltraLIMS.
+    Evita varrer todas as colunas 3 vezes e reexecutar regex a cada linha de amostra,
+    reduzindo a leitura do cabeçalho de O(linhas × colunas) para O(colunas).
+    """
+
+    colunas_codigo_amostra: list[str] = field(default_factory=list)
+    colunas_codigo_externo: list[str] = field(default_factory=list)
+    colunas_data_coleta: list[str] = field(default_factory=list)
+    colunas_data_conclusao: list[str] = field(default_factory=list)
+    # Tuplas pré-interpretadas: (nome_coluna_original, id_num_ensaio, descricao_coluna)
+    colunas_ensaios: list[tuple[str, int, str]] = field(default_factory=list)
+
+
+def _mapear_cabecalho_ultralims(colunas: list[str]) -> MapaCabecalhoUltraLIMS:
+    """
+    Analisa os nomes das colunas da planilha UMA ÚNICA VEZ antes do loop de amostras.
+    Complexidade: O(colunas).
+    """
+    colunas_codigo_amostra: list[str] = []
+    colunas_codigo_externo: list[str] = []
+    colunas_data_coleta: list[str] = []
+    colunas_data_conclusao: list[str] = []
+    colunas_ensaios: list[tuple[str, int, str]] = []
+
+    for nome_coluna in colunas:
+        nome_minusculo = str(nome_coluna).strip().lower()
+
+        if "extern" in nome_minusculo:
+            colunas_codigo_externo.append(nome_coluna)
+        elif any(chave in nome_minusculo for chave in ("amostra", "código", "codigo", "nº")):
+            colunas_codigo_amostra.append(nome_coluna)
+
+        if "coleta" in nome_minusculo:
+            colunas_data_coleta.append(nome_coluna)
+        elif "conclus" in nome_minusculo:
+            colunas_data_conclusao.append(nome_coluna)
+
+        match_ensaio = _RE_COLUNA_ENSAIO.match(str(nome_coluna))
+        if match_ensaio:
+            id_num = int(match_ensaio.group(1))
+            descricao_coluna = match_ensaio.group(2).strip()
+            colunas_ensaios.append((nome_coluna, id_num, descricao_coluna))
+
+    return MapaCabecalhoUltraLIMS(
+        colunas_codigo_amostra=colunas_codigo_amostra,
+        colunas_codigo_externo=colunas_codigo_externo,
+        colunas_data_coleta=colunas_data_coleta,
+        colunas_data_conclusao=colunas_data_conclusao,
+        colunas_ensaios=colunas_ensaios,
+    )
+
+
 def _extrair_unidades_referencia(
     unidades_vmp: UnidadesVmpMap,
     id_num: int,
 ) -> list[str]:
-    """Normaliza a entrada (str ou coleção de str) em lista deduplicada de unidades da legislação."""
+    """Normaliza a entrada (str ou coleção de str) em lista deduplicada de unidades em O(n)."""
     if id_num not in unidades_vmp:
         return []
     val = unidades_vmp[id_num]
     if isinstance(val, str):
         return [normalizar_unidade(val)]
-    vistas: list[str] = []
-    for u in val:
-        norm = normalizar_unidade(u)
-        if norm not in vistas:
-            vistas.append(norm)
-    return vistas
+    # dict.fromkeys remove duplicatas em O(n) mantendo a ordem original (sem busca linear O(n²))
+    return list(dict.fromkeys(normalizar_unidade(unidade) for unidade in val))
 
 
 def _avaliar_divergencias_unidade_ensaio(
@@ -100,7 +152,7 @@ def _avaliar_divergencias_unidade_ensaio(
 
 def _analisar_linha_amostra(
     linha: pd.Series,
-    colunas: list[str],
+    mapa_cabecalho: MapaCabecalhoUltraLIMS,
     nome_arquivo: str,
     idx_linha: int,
     total_linhas: int,
@@ -114,38 +166,28 @@ def _analisar_linha_amostra(
     codigo_amostra = f"{68410 + idx_linha}/2026"
     codigo_externo: Optional[str] = None
 
-    for col in colunas:
-        cname = str(col).strip().lower()
-        val = "" if pd.isna(linha[col]) else str(linha[col]).strip()
-        if not val or val.lower() == "nan":
-            continue
-        if "extern" in cname and any(k in cname for k in ("amostra", "código", "codigo", "cod")):
-            if codigo_externo is None:
-                codigo_externo = val
-            continue
-        if any(k in cname for k in ("amostra", "código", "codigo", "nº")):
+    # Usa diretamente as colunas pré-mapeadas no cabeçalho (sem varrer todas as colunas novamente)
+    for col_cod in mapa_cabecalho.colunas_codigo_amostra:
+        val = "" if pd.isna(linha[col_cod]) else str(linha[col_cod]).strip()
+        if val and val.lower() != "nan":
             codigo_amostra = val
             break
 
-    if codigo_externo is None:
-        for col in colunas:
-            cname = str(col).strip().lower()
-            if "extern" in cname:
-                val = "" if pd.isna(linha[col]) else str(linha[col]).strip()
-                if val and val.lower() != "nan":
-                    codigo_externo = val
-                    break
+    for col_ext in mapa_cabecalho.colunas_codigo_externo:
+        val = "" if pd.isna(linha[col_ext]) else str(linha[col_ext]).strip()
+        if val and val.lower() != "nan":
+            codigo_externo = val
+            break
 
     data_coleta = date.today()
+    for col_coleta in mapa_cabecalho.colunas_data_coleta:
+        parsed = _parse_data_celula(linha[col_coleta])
+        if parsed:
+            data_coleta = parsed
+
     data_conclusao: Optional[date] = None
-    for col in colunas:
-        cname = str(col).strip().lower()
-        if "coleta" in cname:
-            parsed = _parse_data_celula(linha[col])
-            if parsed:
-                data_coleta = parsed
-        elif "conclus" in cname:
-            data_conclusao = _parse_data_celula(linha[col])
+    for col_conc in mapa_cabecalho.colunas_data_conclusao:
+        data_conclusao = _parse_data_celula(linha[col_conc])
 
     itens_mapeados: list[OcorrenciaPreLeitura] = []
     itens_sem_vmp: list[OcorrenciaPreLeitura] = []
@@ -189,12 +231,8 @@ def _analisar_linha_amostra(
             )
         )
 
-    for col in colunas:
-        m = _RE_COLUNA_ENSAIO.match(str(col))
-        if not m:
-            continue
-        id_num = int(m.group(1))
-        desc_col = m.group(2).strip()
+    # Percorre apenas as colunas de ensaio já identificadas e pré-parseadas no cabeçalho
+    for col, id_num, desc_col in mapa_cabecalho.colunas_ensaios:
         bruto = "" if pd.isna(linha[col]) else str(linha[col])
         bruto_strip = bruto.strip()
         # Descarta silenciosamente células puramente vazias para não poluir o diagnóstico
@@ -467,7 +505,9 @@ def analisar_lote_ultralims(
     if df.empty:
         raise ValueError("A planilha enviada está vazia.")
 
+    # Pré-processa o cabeçalho 1 única vez antes de iterar sobre as linhas da planilha
     colunas = [str(c) for c in df.columns]
+    mapa_cabecalho = _mapear_cabecalho_ultralims(colunas)
     df_proc = df.head(limite_amostras)
     amostras: list[ResultadoPreLeitura] = []
     codigos_vistos_lote: set[str] = set()
@@ -475,7 +515,7 @@ def analisar_lote_ultralims(
     for idx, (_, linha) in enumerate(df_proc.iterrows()):
         res = _analisar_linha_amostra(
             linha=linha,
-            colunas=colunas,
+            mapa_cabecalho=mapa_cabecalho,
             nome_arquivo=nome_arquivo,
             idx_linha=idx,
             total_linhas=len(df_proc),

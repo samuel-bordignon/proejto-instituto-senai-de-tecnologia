@@ -422,12 +422,11 @@ def registrar_pagina_importar() -> None:
                     mostrar_toast_aviso(str(exc))
                     return
 
+                # `criadas` já chega ordenada pela Fila de Prioridade (heapq):
+                # 1º Não favorável -> 2º Pendente -> 3º Favorável.
                 codigos_lote = [a.codigo for a in criadas]
                 definir_lote_sessao(codigos_lote)
-
                 destino = codigos_lote[0]
-                if estado["amostra_ativa"] in codigos_lote:
-                    destino = estado["amostra_ativa"]
 
                 msg = (
                     f"{len(criadas)} amostras importadas e avaliadas"

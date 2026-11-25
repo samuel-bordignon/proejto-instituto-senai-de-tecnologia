@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import calendar
+from collections import deque
 import math
 from datetime import date
 from typing import Optional
@@ -66,8 +67,17 @@ def calcular_estatistica_historica(
         data_corte = _subtrair_meses(ref, janela_meses)
         candidatos = [p for p in candidatos if data_corte <= p.data_coleta < ref]
 
-    candidatos.sort(key=lambda p: p.data_coleta)
-    anteriores = [float(p.valor_numerico) for p in candidatos[-max_resultados:] if p.valor_numerico is not None]
+    # Ordena os resultados anteriores em ordem cronológica e alimenta uma
+    # Fila Circular de tamanho fixo (deque com maxlen = 6).
+    # Quando um novo ponto entra após o limite, o mais antigo é descartado
+    # automaticamente pela esquerda em O(1), garantindo memória constante O(1).
+    candidatos.sort(key=lambda ponto: ponto.data_coleta)
+    janela_circular: deque[float] = deque(maxlen=max_resultados)
+    for ponto in candidatos:
+        if ponto.valor_numerico is not None:
+            janela_circular.append(float(ponto.valor_numerico))
+
+    anteriores = list(janela_circular)
 
     n = len(anteriores)
     if n < min_amostras:
