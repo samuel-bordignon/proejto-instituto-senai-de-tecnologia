@@ -94,6 +94,7 @@ def montar_ensaio(
         valor_atual=v,
         qualificador_atual=q,
         operador=operador_principal,
+        status_conformidade=status,
     )
 
     ensaio = EnsaioResultado(
