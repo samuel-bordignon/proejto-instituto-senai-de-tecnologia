@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from collections import defaultdict
+from collections import defaultdict, deque
 from datetime import date, datetime
 import re
 import threading
@@ -45,6 +45,7 @@ from app.core.motor_conformidade import (
     formatar_vmp_texto,
     gerar_parecer_automatico,
     interpretar_valor_bruto,
+    ordenar_lote_por_prioridade,
 )
 from app.core.parser_ultralims import analisar_lote_ultralims, recalcular_lote_por_normas
 from database import consultar_lista, consultar_um, executar_sql, obter_query, transaction
@@ -176,6 +177,38 @@ def _vmp_ref_numerico(operador: str, vmin: Optional[float], vmax: Optional[float
     return None
 
 
+def _construir_pilha_logs_auditoria(logs_rows: list[dict[str, Any]]) -> list[LogAlteracao]:
+    """
+    Modela o histórico de auditoria (RN-10) como uma Pilha (LIFO) usando collections.deque.
+    Cada registro é empilhado no topo via `appendleft()` em tempo constante O(1),
+    evitando deslocamento de memória O(n) causado por `list.insert(0, ...)`.
+    Como `listar_logs_por_amostra` vem ordenado do mais recente para o mais antigo,
+    percorremos em ordem cronológica (reversa) para empilhar o evento mais recente no topo.
+    """
+    pilha_logs: deque[LogAlteracao] = deque()
+
+    for lr in reversed(logs_rows):
+        campo_valido = (
+            lr["campo_alterado"]
+            if lr["campo_alterado"] in ("conformidade", "parecer_geral", "minuta")
+            else "conformidade"
+        )
+        registro = LogAlteracao(
+            id=lr["id"],
+            data_alteracao=lr["data_alteracao"],
+            usuario=lr["usuario"],
+            campo_alterado=campo_valido,
+            ensaio_codigo=int(lr["ensaio_codigo"]) if lr["ensaio_codigo"] is not None else None,
+            ensaio_nome=lr["ensaio_nome"],
+            valor_anterior=lr["valor_anterior"] or "",
+            valor_novo=lr["valor_novo"] or "",
+            observacao=lr["observacao"],
+        )
+        pilha_logs.appendleft(registro)
+
+    return list(pilha_logs)
+
+
 class PostgresRepository:
     """Repositório de produção conectado ao PostgreSQL/Supabase com cache de catálogo base."""
 
@@ -244,6 +277,8 @@ class PostgresRepository:
             sigla_por_nome: dict[str, str] = {}
             possui_classes_map: dict[tuple[str, str], bool] = {}
 
+            # Usamos dicionários como conjuntos ordenados (dict.fromkeys / chaves únicas em O(1))
+            # para evitar verificações lineares 'if x not in lista' (O(n²)).
             for r in leg_orig_rows:
                 nome_leg = r["legislacao_nome"]
                 sigla = _sigla_legislacao(nome_leg)
@@ -259,30 +294,39 @@ class PostgresRepository:
                         "sigla": sigla,
                         "nome_completo": nome_leg,
                         "legislacao_id": r["legislacao_id"],
-                        "origens": [],
-                        "classes": [],
-                        "classes_por_origem": defaultdict(list),
+                        "origens_set": {},
+                        "classes_set": {},
+                        "classes_por_origem_set": defaultdict(dict),
                         "possui_classes": possui_cl,
                     },
                 )
                 if possui_cl:
                     meta["possui_classes"] = True
-                if origem_nome not in meta["origens"]:
-                    meta["origens"].append(origem_nome)
+                meta["origens_set"][origem_nome] = None
 
                 if possui_cl:
                     if r["classe_nome"]:
                         lbl_cl = _classe_ui_dropdown(sigla, r["classe_nome"], True)
-                        if lbl_cl and lbl_cl not in meta["classes"]:
-                            meta["classes"].append(lbl_cl)
-                        if lbl_cl and lbl_cl not in meta["classes_por_origem"][origem_nome]:
-                            meta["classes_por_origem"][origem_nome].append(lbl_cl)
+                        if lbl_cl:
+                            meta["classes_set"][lbl_cl] = None
+                            meta["classes_por_origem_set"][origem_nome][lbl_cl] = None
                     if possui_sem_cl:
                         lbl_sem = _classe_ui_dropdown(sigla, None, True)
-                        if lbl_sem and lbl_sem not in meta["classes"]:
-                            meta["classes"].append(lbl_sem)
-                        if lbl_sem and lbl_sem not in meta["classes_por_origem"][origem_nome]:
-                            meta["classes_por_origem"][origem_nome].append(lbl_sem)
+                        if lbl_sem:
+                            meta["classes_set"][lbl_sem] = None
+                            meta["classes_por_origem_set"][origem_nome][lbl_sem] = None
+
+            # Materializa as listas finais deduplicadas em O(n) mantendo a ordem de inserção
+            for meta in leg_meta.values():
+                meta["origens"] = list(meta.pop("origens_set").keys())
+                meta["classes"] = list(meta.pop("classes_set").keys())
+                meta["classes_por_origem"] = defaultdict(
+                    list,
+                    {
+                        orig: list(classes_dict.keys())
+                        for orig, classes_dict in meta.pop("classes_por_origem_set").items()
+                    },
+                )
 
             self._leg_meta_por_sigla = leg_meta
             self._sigla_por_nome_leg = sigla_por_nome
@@ -354,8 +398,8 @@ class PostgresRepository:
             self._rotulo_proposta_por_id = rotulo_por_id
 
             loc_id_por_nome: dict[str, str] = {}
-            loc_por_cli_prop: dict[tuple[str, str], list[str]] = defaultdict(list)
-            loc_por_cli: dict[str, list[str]] = defaultdict(list)
+            loc_por_cli_prop_dict: dict[tuple[str, str], dict[str, None]] = defaultdict(dict)
+            loc_por_cli_dict: dict[str, dict[str, None]] = defaultdict(dict)
 
             for r in locais_rows:
                 lnome = r["local_nome"]
@@ -365,14 +409,19 @@ class PostgresRepository:
                 rot_prop = rotulo_por_id.get(pid, "")
 
                 loc_id_por_nome[lnome] = lid
-                if rot_prop and lnome not in loc_por_cli_prop[(cli_nome, rot_prop)]:
-                    loc_por_cli_prop[(cli_nome, rot_prop)].append(lnome)
-                if lnome not in loc_por_cli[cli_nome]:
-                    loc_por_cli[cli_nome].append(lnome)
+                if rot_prop:
+                    loc_por_cli_prop_dict[(cli_nome, rot_prop)][lnome] = None
+                loc_por_cli_dict[cli_nome][lnome] = None
 
             self._locais_id_por_nome = loc_id_por_nome
-            self._locais_por_cliente_proposta = dict(loc_por_cli_prop)
-            self._locais_por_cliente = dict(loc_por_cli)
+            self._locais_por_cliente_proposta = {
+                chave: list(locais_unicos.keys())
+                for chave, locais_unicos in loc_por_cli_prop_dict.items()
+            }
+            self._locais_por_cliente = {
+                cli: list(locais_unicos.keys())
+                for cli, locais_unicos in loc_por_cli_dict.items()
+            }
             self._laboratorio_padrao_id = lab_row["id"] if lab_row else None
             self._usuario_padrao_id = usr_row["id"] if usr_row else None
             self._carregado = True
@@ -448,8 +497,10 @@ class PostgresRepository:
             "Água Bruta (Captação/Subterrânea)",
             "Água de Consumo Humano",
         ]
-        origens_ordenadas = [o for o in preferencia_origens if o in self._origens] + [
-            o for o in self._origens if o not in preferencia_origens
+        origens_cadastradas_set = set(self._origens)
+        preferencia_set = set(preferencia_origens)
+        origens_ordenadas = [o for o in preferencia_origens if o in origens_cadastradas_set] + [
+            o for o in self._origens if o not in preferencia_set
         ]
 
         melhor_score = -1
@@ -524,7 +575,7 @@ class PostgresRepository:
         """Monta conjuntos (codigos_com_vmp, unidades_vmp_por_ensaio, operadores_por_ensaio) das normas ativas."""
         self._garantir_catalogo()
         codigos_com_vmp: set[int] = set()
-        unidades_por_ensaio: dict[int, list[str]] = defaultdict(list)
+        unidades_por_ensaio_dict: dict[int, dict[str, None]] = defaultdict(dict)
         operadores_por_ensaio: dict[int, set[str]] = defaultdict(set)
 
         if origem and normas_selecionadas:
@@ -539,17 +590,20 @@ class PostgresRepository:
                 mapa = self._parametros_por_contexto.get((origem, sigla, classe_db), {})
                 for cod, (_, param) in mapa.items():
                     codigos_com_vmp.add(cod)
-                    unidades_por_ensaio[cod].append(param.unidade)
+                    unidades_por_ensaio_dict[cod][param.unidade] = None
                     operadores_por_ensaio[cod].add(param.operador)
         else:
             for mapa in self._parametros_por_contexto.values():
                 for cod, (_, param) in mapa.items():
                     codigos_com_vmp.add(cod)
-                    if param.unidade not in unidades_por_ensaio[cod]:
-                        unidades_por_ensaio[cod].append(param.unidade)
+                    unidades_por_ensaio_dict[cod][param.unidade] = None
                     operadores_por_ensaio[cod].add(param.operador)
 
-        return codigos_com_vmp, dict(unidades_por_ensaio), dict(operadores_por_ensaio)
+        unidades_por_ensaio = {
+            cod: list(unids_unicas.keys())
+            for cod, unids_unicas in unidades_por_ensaio_dict.items()
+        }
+        return codigos_com_vmp, unidades_por_ensaio, dict(operadores_por_ensaio)
 
     def _construir_norma_aplicada(
         self, sigla: str, origem: str, classe_ui: Optional[str]
@@ -790,7 +844,10 @@ class PostgresRepository:
             am = self.obter_amostra(cod)
             if am:
                 saida.append(am)
-        return saida
+
+        # Entrega o lote ordenado pela Fila de Prioridade (heapq):
+        # 1º Não favorável -> 2º Pendente -> 3º Favorável
+        return ordenar_lote_por_prioridade(saida)
 
     def excluir_amostra(self, codigo: str) -> int:
         """Remove transacionalmente uma amostra e suas análises/resultados (útil para limpeza de testes)."""
@@ -821,7 +878,13 @@ class PostgresRepository:
             and data_corte <= r["data_coleta"] < amostra_data
         ]
         validos_ant.sort(key=lambda r: (r["data_coleta"], r["codigo_amostra"]))
-        recorte_ant = validos_ant[-MAX_RESULTADOS_HISTORICO:]
+
+        # Fila Circular de tamanho fixo (maxlen = 6) para manter apenas as últimas
+        # 6 coletas anteriores em memória constante O(1)
+        janela_circular: deque[dict[str, Any]] = deque(maxlen=MAX_RESULTADOS_HISTORICO)
+        for registro_ant in validos_ant:
+            janela_circular.append(registro_ant)
+        recorte_ant = list(janela_circular)
 
         # Se duas coletas caem no mesmo mês/ano, inclui o dia no rótulo para não colidir no eixo X
         contagem_mes: dict[tuple[int, int], int] = defaultdict(int)
@@ -1016,24 +1079,8 @@ class PostgresRepository:
             ensaio_obj.sinalizacao_tipo = sinal_tipo  # type: ignore[arg-type]
             ensaios_out.append(ensaio_obj)
 
-        logs_out = [
-            LogAlteracao(
-                id=lr["id"],
-                data_alteracao=lr["data_alteracao"],
-                usuario=lr["usuario"],
-                campo_alterado=(
-                    lr["campo_alterado"]
-                    if lr["campo_alterado"] in ("conformidade", "parecer_geral", "minuta")
-                    else "conformidade"
-                ),
-                ensaio_codigo=int(lr["ensaio_codigo"]) if lr["ensaio_codigo"] is not None else None,
-                ensaio_nome=lr["ensaio_nome"],
-                valor_anterior=lr["valor_anterior"] or "",
-                valor_novo=lr["valor_novo"] or "",
-                observacao=lr["observacao"],
-            )
-            for lr in logs_rows
-        ]
+        # Histórico de auditoria RN-10 modelado como Pilha (LIFO) via deque.appendleft() em O(1)
+        logs_out = _construir_pilha_logs_auditoria(logs_rows)
 
         status_geral_str = (
             calcular_status_geral(ensaios_out)
@@ -1335,17 +1382,17 @@ class PostgresRepository:
             obter_query("analise_local", "listar_normas_avaliadas_no_local"),
             (local_coleta,),
         )
-        saida: list[str] = []
+        # Deduplicação em O(n) preservando a ordem com dict de chaves únicas
+        rotulos_unicos: dict[str, None] = {}
         for r in rows:
             sigla = self._sigla_por_nome_leg.get(r["legislacao_nome"], _sigla_legislacao(r["legislacao_nome"]))
             possui_cl = bool(r["possui_classes"])
             classe_can = _classe_canonica_norma(r["classe_nome"], possui_cl)
             rot = f"{sigla} — {classe_can}" if classe_can else sigla
-            if rot not in saida:
-                saida.append(rot)
+            rotulos_unicos[rot] = None
 
-        if saida:
-            return saida
+        if rotulos_unicos:
+            return list(rotulos_unicos.keys())
 
         # Fallback: normas vinculadas à proposta comercial do local (quando local ainda não tem amostras)
         for (cli, rot_prop), locais in self._locais_por_cliente_proposta.items():
@@ -1360,11 +1407,10 @@ class PostgresRepository:
                         for cl_ui in meta_l["classes"]:
                             cl_can = _limpar_rotulo_classe(cl_ui)
                             rot = f"{sigla} — {cl_can}" if cl_can else sigla
-                            if rot not in saida:
-                                saida.append(rot)
-                    elif sigla not in saida:
-                        saida.append(sigla)
-        return saida
+                            rotulos_unicos[rot] = None
+                    else:
+                        rotulos_unicos[sigla] = None
+        return list(rotulos_unicos.keys())
 
     def obter_evolucao_mensal_local(
         self,
