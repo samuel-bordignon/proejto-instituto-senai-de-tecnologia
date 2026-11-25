@@ -1,4 +1,4 @@
-"""Entry point da POC LaudoTech em NiceGUI (Monorepo Python, dados mockados)."""
+"""Entry point da aplicação LaudoTech em NiceGUI conectada ao PostgreSQL/Supabase."""
 
 from __future__ import annotations
 
@@ -20,13 +20,15 @@ from app.ui.pages.conferencia import registrar_pagina_conferencia
 from app.ui.pages.importar import registrar_pagina_importar
 from app.ui.pages.login import registrar_pagina_login
 from app.ui.pages.painel import registrar_pagina_painel
+from database import close_pool
 
 # Assets estáticos (foto FIESC/SENAI e ícone oficial LaudoTech)
 PASTA_ASSETS = PASTA_APP / "assets"
 app.add_static_files("/assets", str(PASTA_ASSETS))
 
-# Middleware de proteção de sessão (Seção 8.4)
+# Middleware de proteção de sessão (RF-01) e liberação limpa do pool no encerramento
 app.add_middleware(AuthMiddleware)
+app.on_shutdown(close_pool)
 
 # Registro das 5 rotas da POC
 registrar_pagina_login()          # /login

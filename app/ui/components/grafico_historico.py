@@ -1,4 +1,4 @@
-"""Gráfico temporal histórico por ensaio com Plotly (Seção 5.4, 6.5 e 8.3)."""
+"""Gráfico temporal histórico por ensaio com Plotly (suporte completo a MENOR_IGUAL, MENOR_ESTRITO, MAIOR_IGUAL e FAIXA)."""
 
 from __future__ import annotations
 
@@ -7,44 +7,99 @@ from typing import Optional
 import plotly.graph_objects as go
 
 from app.core.config import STATUS_NAO_CONFORME
-from app.core.models import EnsaioResultado
+from app.core.models import AvaliacaoNorma, EnsaioResultado
 from app.core.motor_conformidade import formatar_numero_br
 
 
-def _obter_vmp_principal(ensaio: EnsaioResultado) -> tuple[Optional[float], Optional[str], Optional[str]]:
-    """Retorna (valor_vmp_numerico, texto_vmp, titulo_norma) mais restritivo do ensaio."""
+def _obter_avaliacao_principal(ensaio: EnsaioResultado) -> tuple[Optional[AvaliacaoNorma], Optional[str], Optional[str]]:
+    """
+    Seleciona a avaliação regulatória mais restritiva do ensaio:
+      - MAIOR_IGUAL (ex: OD): maior valor_min exigido (ex: Classe 1 >= 6 mg/L sobre Classe 2 >= 5 mg/L)
+      - FAIXA (ex: pH): menor amplitude / maior valor_min e menor valor_max
+      - MENOR_IGUAL / MENOR_ESTRITO: menor valor_max permitido
+    """
     candidatos = [
         av
         for av in ensaio.avaliacoes.values()
-        if av.vmp_numerico_ref is not None and av.motivo != "UNIDADE_DIVERGENTE"
+        if av.motivo != "UNIDADE_DIVERGENTE"
+        and (av.vmp_min is not None or av.vmp_max is not None or av.vmp_numerico_ref is not None)
     ]
     if not candidatos:
-        # Mesmo se unidade divergir, mostra o texto de referência no cabeçalho mas não plota linha enganosa
         qualquer = next(iter(ensaio.avaliacoes.values()), None)
         if qualquer:
             return None, qualquer.vmp_texto, qualquer.norma_titulo
         return None, None, None
 
-    escolhido = min(candidatos, key=lambda a: a.vmp_numerico_ref or float("inf"))
-    return escolhido.vmp_numerico_ref, escolhido.vmp_texto, escolhido.norma_titulo
+    op0 = candidatos[0].operador
+    if op0 == "MAIOR_IGUAL":
+        escolhido = max(
+            candidatos,
+            key=lambda a: a.vmp_min if a.vmp_min is not None else (a.vmp_numerico_ref or float("-inf")),
+        )
+    elif op0 == "FAIXA":
+        escolhido = min(
+            candidatos,
+            key=lambda a: (
+                (a.vmp_max if a.vmp_max is not None else float("inf"))
+                - (a.vmp_min if a.vmp_min is not None else 0.0)
+            ),
+        )
+    else:
+        escolhido = min(
+            candidatos,
+            key=lambda a: a.vmp_max if a.vmp_max is not None else (a.vmp_numerico_ref or float("inf")),
+        )
+    return escolhido, escolhido.vmp_texto, escolhido.norma_titulo
+
+
+def _resolver_limiares_estatisticos(
+    ensaio: EnsaioResultado, operador: str
+) -> tuple[str, str, Optional[float], Optional[float]]:
+    """Retorna (rotulo_header, valor_header, limiar_inferior_plot, limiar_superior_plot)."""
+    stats = ensaio.estatistica
+    if not stats or stats.n_anteriores < 3:
+        if operador == "MAIOR_IGUAL":
+            return "Limiar μ−0,20σ:", "—", None, None
+        if operador == "FAIXA":
+            return "Faixa μ±0,20σ:", "—", None, None
+        return "Limiar μ+0,20σ:", "—", None, None
+
+    if operador == "MAIOR_IGUAL":
+        txt = formatar_numero_br(stats.limiar_inferior, 2) if stats.limiar_inferior is not None else "—"
+        return "Limiar μ−0,20σ:", txt, stats.limiar_inferior, None
+
+    if operador == "FAIXA":
+        inf_t = formatar_numero_br(stats.limiar_inferior, 2)
+        sup_t = formatar_numero_br(stats.limiar_superior, 2)
+        return "Faixa μ±0,20σ:", f"{inf_t} a {sup_t}", stats.limiar_inferior, stats.limiar_superior
+
+    txt = formatar_numero_br(stats.limiar_superior, 2) if stats.limiar_superior is not None else "—"
+    return "Limiar μ+0,20σ:", txt, None, stats.limiar_superior
 
 
 def construir_figura_historico(ensaio: EnsaioResultado) -> tuple[go.Figure, dict[str, str]]:
     """
     Constrói a figura Plotly do ensaio selecionado na tela B4:
-      - Série das últimas 6 coletas (6 meses)
-      - Linha horizontal da Média (μ) [nova exigência da Seção 6.5 / D8]
-      - Linha horizontal do Limiar μ + 0,20σ (âmbar tracejada, quando n >= 3)
-      - Linha horizontal do VMP (vermelha tracejada)
-      - Marcadores distintos para Medição Exata, <LQ (losango vazado), >LS (triângulo) e Coleta Atual violando VMP
+      - Série das últimas 6 coletas (janela calendário de 6 meses)
+      - Linha horizontal da Média (μ)
+      - Linhas de Limiar estatístico: μ+0,20σ (MENOR_*), μ−0,20σ (MAIOR_IGUAL) ou ambas (FAIXA)
+      - Linhas de VMP: única (MENOR_* / MAIOR_IGUAL) ou dupla VMP mín. / VMP máx. (FAIXA)
+      - Marcadores distintos para Medição Exata, <LQ, >LS, Desvio e Violação Atual
     """
-    vmp_val, vmp_texto, vmp_norma = _obter_vmp_principal(ensaio)
+    av_ref, vmp_texto, vmp_norma = _obter_avaliacao_principal(ensaio)
+    operador = (
+        av_ref.operador
+        if av_ref is not None
+        else (next(iter(ensaio.avaliacoes.values())).operador if ensaio.avaliacoes else "MENOR_IGUAL")
+    )
     stats = ensaio.estatistica
+    limiar_label, limiar_txt, lim_inf_plot, lim_sup_plot = _resolver_limiares_estatisticos(ensaio, operador)
 
     meta_header = {
         "media": formatar_numero_br(stats.media, 2) if stats and stats.media is not None else "—",
         "sigma": formatar_numero_br(stats.desvio_padrao, 2) if stats and stats.desvio_padrao is not None else "—",
-        "limiar": formatar_numero_br(stats.limiar_superior, 2) if stats and stats.limiar_superior is not None else "—",
+        "limiar_label": limiar_label,
+        "limiar": limiar_txt,
         "vmp_label": f"VMP ({vmp_norma}):" if vmp_norma else "VMP:",
         "vmp_texto": vmp_texto or "—",
         "aviso_historico": (
@@ -55,7 +110,6 @@ def construir_figura_historico(ensaio: EnsaioResultado) -> tuple[go.Figure, dict
     }
 
     pontos_validos = [p for p in ensaio.historico if p.valor_numerico is not None]
-
     fig = go.Figure()
 
     if not pontos_validos:
@@ -113,9 +167,17 @@ def construir_figura_historico(ensaio: EnsaioResultado) -> tuple[go.Figure, dict
         )
     )
 
-    # 2. Classifica marcadores por categoria (Medição exata, <LQ, >LS, Desvio, Atual fora VMP)
+    # 2. Classifica marcadores por categoria
     idx_exata, idx_lq, idx_ls, idx_desvio, idx_atual_nc = [], [], [], [], []
-    limiar = stats.limiar_superior if stats and stats.n_anteriores >= 3 else None
+
+    def _fora_limiar(valor: float) -> bool:
+        if operador == "MAIOR_IGUAL":
+            return lim_inf_plot is not None and valor < lim_inf_plot
+        if operador == "FAIXA":
+            abaixo = lim_inf_plot is not None and valor < lim_inf_plot
+            acima = lim_sup_plot is not None and valor > lim_sup_plot
+            return abaixo or acima
+        return lim_sup_plot is not None and valor > lim_sup_plot
 
     for i, p in enumerate(pontos_validos):
         if p.is_atual and ensaio.status == STATUS_NAO_CONFORME:
@@ -124,7 +186,7 @@ def construir_figura_historico(ensaio: EnsaioResultado) -> tuple[go.Figure, dict
             idx_lq.append(i)
         elif p.is_ls:
             idx_ls.append(i)
-        elif limiar is not None and p.valor_numerico is not None and p.valor_numerico > limiar:
+        elif p.valor_numerico is not None and _fora_limiar(float(p.valor_numerico)):
             idx_desvio.append(i)
         else:
             idx_exata.append(i)
@@ -144,6 +206,12 @@ def construir_figura_historico(ensaio: EnsaioResultado) -> tuple[go.Figure, dict
                 showlegend=True,
             )
         )
+
+    rotulo_desvio = (
+        "Desvio (< μ−0,20σ)"
+        if operador == "MAIOR_IGUAL"
+        else ("Desvio (μ±0,20σ)" if operador == "FAIXA" else "Desvio (> μ+0,20σ)")
+    )
 
     _add_markers(
         idx_exata,
@@ -165,13 +233,12 @@ def construir_figura_historico(ensaio: EnsaioResultado) -> tuple[go.Figure, dict
     )
     _add_markers(
         idx_desvio,
-        "Desvio (> μ+0,20σ)",
+        rotulo_desvio,
         dict(symbol="circle", size=10, color="#D97706", line=dict(color="#FFFFFF", width=1.5)),
         show_always=False,
     )
 
     if idx_atual_nc:
-        # Alvo vermelho concêntrico (exatamente como no Figma B4/B4b)
         fig.add_trace(
             go.Scatter(
                 x=[x_labels[i] for i in idx_atual_nc],
@@ -200,7 +267,7 @@ def construir_figura_historico(ensaio: EnsaioResultado) -> tuple[go.Figure, dict
             )
         )
 
-    # 3. Linhas horizontais de referência (VMP, μ [nova!], Limiar μ + 0,20σ)
+    # 3. Linhas horizontais de referência (Média μ, Limiares estatísticos e VMPs)
     ref_vals = list(y_vals)
 
     if stats and stats.media is not None and stats.n_anteriores >= 3:
@@ -216,31 +283,77 @@ def construir_figura_historico(ensaio: EnsaioResultado) -> tuple[go.Figure, dict
             )
         )
 
-    if limiar is not None:
-        ref_vals.append(limiar)
+    if lim_sup_plot is not None:
+        ref_vals.append(lim_sup_plot)
         fig.add_trace(
             go.Scatter(
                 x=[x_labels[0], x_labels[-1]],
-                y=[limiar, limiar],
+                y=[lim_sup_plot, lim_sup_plot],
                 mode="lines",
                 name="Limiar μ+0,20σ",
                 line=dict(color="#D97706", width=1.6, dash="dash"),
-                hovertemplate=f"Limiar μ+0,20σ: <b>{formatar_numero_br(limiar, 2)} {ensaio.unidade_trabalho}</b><extra></extra>",
+                hovertemplate=f"Limiar μ+0,20σ: <b>{formatar_numero_br(lim_sup_plot, 2)} {ensaio.unidade_trabalho}</b><extra></extra>",
             )
         )
 
-    if vmp_val is not None:
-        ref_vals.append(vmp_val)
+    if lim_inf_plot is not None:
+        ref_vals.append(lim_inf_plot)
         fig.add_trace(
             go.Scatter(
                 x=[x_labels[0], x_labels[-1]],
-                y=[vmp_val, vmp_val],
+                y=[lim_inf_plot, lim_inf_plot],
                 mode="lines",
-                name="VMP",
-                line=dict(color="#DC2626", width=1.6, dash="dash"),
-                hovertemplate=f"VMP ({vmp_norma}): <b>{vmp_texto}</b><extra></extra>",
+                name="Limiar μ−0,20σ",
+                line=dict(color="#D97706", width=1.6, dash="dash"),
+                hovertemplate=f"Limiar μ−0,20σ: <b>{formatar_numero_br(lim_inf_plot, 2)} {ensaio.unidade_trabalho}</b><extra></extra>",
             )
         )
+
+    if av_ref is not None:
+        if av_ref.operador == "FAIXA":
+            if av_ref.vmp_min is not None:
+                ref_vals.append(av_ref.vmp_min)
+                fig.add_trace(
+                    go.Scatter(
+                        x=[x_labels[0], x_labels[-1]],
+                        y=[av_ref.vmp_min, av_ref.vmp_min],
+                        mode="lines",
+                        name=f"VMP mín. ({formatar_numero_br(av_ref.vmp_min)})",
+                        line=dict(color="#DC2626", width=1.6, dash="dash"),
+                        hovertemplate=f"VMP mín. ({vmp_norma}): <b>{formatar_numero_br(av_ref.vmp_min)}</b><extra></extra>",
+                    )
+                )
+            if av_ref.vmp_max is not None:
+                ref_vals.append(av_ref.vmp_max)
+                fig.add_trace(
+                    go.Scatter(
+                        x=[x_labels[0], x_labels[-1]],
+                        y=[av_ref.vmp_max, av_ref.vmp_max],
+                        mode="lines",
+                        name=f"VMP máx. ({formatar_numero_br(av_ref.vmp_max)})",
+                        line=dict(color="#DC2626", width=1.6, dash="dash"),
+                        hovertemplate=f"VMP máx. ({vmp_norma}): <b>{formatar_numero_br(av_ref.vmp_max)}</b><extra></extra>",
+                    )
+                )
+        else:
+            vmp_unico = (
+                av_ref.vmp_min
+                if av_ref.operador == "MAIOR_IGUAL" and av_ref.vmp_min is not None
+                else (av_ref.vmp_max if av_ref.vmp_max is not None else av_ref.vmp_numerico_ref)
+            )
+            if vmp_unico is not None:
+                ref_vals.append(vmp_unico)
+                lbl_vmp = "VMP mín." if av_ref.operador == "MAIOR_IGUAL" else "VMP"
+                fig.add_trace(
+                    go.Scatter(
+                        x=[x_labels[0], x_labels[-1]],
+                        y=[vmp_unico, vmp_unico],
+                        mode="lines",
+                        name=lbl_vmp,
+                        line=dict(color="#DC2626", width=1.6, dash="dash"),
+                        hovertemplate=f"{lbl_vmp} ({vmp_norma}): <b>{vmp_texto}</b><extra></extra>",
+                    )
+                )
 
     y_min = min(ref_vals)
     y_max = max(ref_vals)
