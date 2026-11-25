@@ -87,6 +87,8 @@ class AvaliacaoNorma(BaseModel):
     norma_nome_parecer: str
     vmp_texto: str
     vmp_numerico_ref: Optional[float] = None
+    vmp_min: Optional[float] = None
+    vmp_max: Optional[float] = None
     operador: str
     conformidade: Optional[bool] = None  # True=Conforme, False=Não conforme, None=Pendente
     motivo: str = "AVALIADO"  # AVALIADO | UNIDADE_DIVERGENTE | MANUAL_TECNICA | NAO_NUMERICO

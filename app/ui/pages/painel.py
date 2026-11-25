@@ -13,7 +13,7 @@ from app.core.config import (
 )
 from app.core.models import Amostra
 from app.core.motor_conformidade import resumir_diagnostico_amostra
-from app.repo.mock_repo import repo
+from app.repo import repo
 from app.ui.components.badges import status_pill_html
 from app.ui.layout import criar_shell
 
