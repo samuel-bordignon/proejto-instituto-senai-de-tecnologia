@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+import heapq
 from typing import Optional
 
 from app.core.config import (
@@ -246,11 +247,9 @@ def gerar_parecer_automatico(amostra: Amostra) -> str:
         if not normas_violadas:
             normas_violadas = [n.nome_parecer for n in amostra.normas]
 
-        # Se todas as classes de uma mesma norma violaram, simplifica o nome da norma
-        normas_unicas: list[str] = []
-        for nm in normas_violadas:
-            if nm not in normas_unicas:
-                normas_unicas.append(nm)
+        # Remove nomes de normas repetidos preservando a ordem original em O(n)
+        # (dict.fromkeys usa tabela hash, evitando busca linear 'not in lista' em O(n²)).
+        normas_unicas = list(dict.fromkeys(normas_violadas))
 
         if len(normas_unicas) == 1:
             alvo = normas_unicas[0]
@@ -336,3 +335,38 @@ def resumir_diagnostico_amostra(amostra: Amostra) -> ResumoDiagnosticoAmostra:
         tem_unidade_divergente=tem_unid_div,
         tem_desvio_historico=tem_desvio,
     )
+
+
+# Mapa explícito de prioridade para conferência de lotes (menor número = maior urgência)
+PRIORIDADE_CONFERENCIA_LOTE: dict[str, int] = {
+    GERAL_NAO_FAVORAVEL: 1,  # Prioridade 1: amostras com ensaios fora do VMP
+    GERAL_PENDENTE: 2,       # Prioridade 2: amostras pendentes de análise técnica
+    GERAL_FAVORAVEL: 3,      # Prioridade 3: amostras 100% conformes
+}
+
+
+def ordenar_lote_por_prioridade(amostras: list[Amostra]) -> list[Amostra]:
+    """
+    Ordena um lote de amostras usando uma Fila de Prioridade (Min-Heap via heapq).
+
+    Ordem de entrega para o conferente:
+      1º -> Não favorável (prioridade 1)
+      2º -> Pendente      (prioridade 2)
+      3º -> Favorável     (prioridade 3)
+
+    O `indice_original` atua como critério de desempate estável (mantém a ordem
+    da planilha entre amostras de mesma prioridade) e evita comparação entre objetos Amostra.
+    Complexidade: O(n log n).
+    """
+    fila_prioridade: list[tuple[int, int, Amostra]] = []
+
+    for indice_original, amostra in enumerate(amostras):
+        nivel_prioridade = PRIORIDADE_CONFERENCIA_LOTE.get(amostra.status_geral, 2)
+        heapq.heappush(fila_prioridade, (nivel_prioridade, indice_original, amostra))
+
+    amostras_ordenadas: list[Amostra] = []
+    while fila_prioridade:
+        _, _, amostra_prioritaria = heapq.heappop(fila_prioridade)
+        amostras_ordenadas.append(amostra_prioritaria)
+
+    return amostras_ordenadas
