@@ -55,8 +55,8 @@ def registrar_pagina_analise_local() -> None:
                     estado["local"] = locais_disp[0]
 
                 normas_disp = repo.listar_normas_do_local(estado["cliente"], estado["local"])
-                if estado["norma"] not in normas_disp and normas_disp:
-                    estado["norma"] = normas_disp[0]
+                if estado["norma"] not in normas_disp:
+                    estado["norma"] = normas_disp[0] if normas_disp else ""
 
                 with ui.row().classes(
                     "w-full lt-card px-[16px] py-[12px] items-center gap-[12px] flex-wrap"
@@ -130,7 +130,13 @@ def registrar_pagina_analise_local() -> None:
                                         "text-[11px] font-medium text-[#52525B]"
                                     )
 
-                    ui.echart(option).classes("w-full h-[250px]")
+                    if not meses or tot_geral == 0:
+                        with ui.row().classes("w-full justify-center py-[42px]"):
+                            ui.label(
+                                "Nenhuma amostra avaliada neste local e norma para o período selecionado."
+                            ).classes("text-[13px] text-[#71717A]")
+                    else:
+                        ui.echart(option).classes("w-full h-[250px]")
 
             @ui.refreshable
             def render_tabela_dinamica() -> None:

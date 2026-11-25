@@ -136,7 +136,7 @@ def registrar_pagina_painel() -> None:
                     row_key="codigo",
                     pagination={"rowsPerPage": 0},
                 )
-                .props("flat hide-bottom")
+                .props('flat hide-bottom no-data-label="Nenhuma amostra encontrada para o filtro selecionado."')
                 .classes("w-full lt-table")
             )
 

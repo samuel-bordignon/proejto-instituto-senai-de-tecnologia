@@ -1,4 +1,4 @@
-"""Tela B3 — Importar Planilha UltraLIMS (/importar) com suporte multi-amostra em abas + Tabela Dinâmica por KPI."""
+"""Tela B3 — Importar Planilha UltraLIMS (/importar) conectada ao PostgreSQL com recálculo dinâmico de KPIs."""
 
 from __future__ import annotations
 
@@ -8,6 +8,7 @@ from nicegui import events, ui
 
 from app.core.models import ResultadoPreLeitura, ResultadoPreLeituraLote
 from app.repo import repo
+from app.ui.auth import obter_usuario_logado
 from app.ui.components.badges import status_pill_html
 from app.ui.components.barra_lote import (
     ItemAbaAmostra,
@@ -28,11 +29,12 @@ def registrar_pagina_importar() -> None:
         criar_shell(aba_ativa="importar")
 
         clientes = repo.listar_clientes()
-        cliente_ini = clientes[0]
-        propostas_ini = repo.listar_propostas(cliente_ini)
-        proposta_ini = propostas_ini[0]
-        locais_ini = repo.listar_locais(cliente_ini, proposta_ini)
-        local_ini = locais_ini[0]
+        cliente_ini = clientes[0] if clientes else ""
+        propostas_ini = repo.listar_propostas(cliente_ini) if cliente_ini else []
+        proposta_ini = propostas_ini[0] if propostas_ini else ""
+        locais_ini = repo.listar_locais(cliente_ini, proposta_ini) if proposta_ini else []
+        local_ini = locais_ini[0] if locais_ini else ""
+        ctx_padrao = repo.obter_contexto_padrao_proposta(cliente_ini, proposta_ini)
 
         estado: dict = {
             "lote": None,
@@ -42,12 +44,12 @@ def registrar_pagina_importar() -> None:
             "cliente": cliente_ini,
             "proposta": proposta_ini,
             "local": local_ini,
-            "origem": "Efluente Tratado",
-            "normas": [
-                {"sigla": "CONAMA 430", "classe": "Sanitário (Art. 21)"},
-                {"sigla": "CONAMA 430", "classe": "Sem Classe (Art. 16)"},
-            ],
+            "origem": ctx_padrao["origem"],
+            "normas": ctx_padrao["normas"],
         }
+
+        def _pares_normas_atuais() -> list[tuple[str, str | None]]:
+            return [(n["sigla"], n["classe"]) for n in estado["normas"]]
 
         def _obter_amostra_ativa() -> ResultadoPreLeitura | None:
             lote: ResultadoPreLeituraLote | None = estado["lote"]
@@ -68,7 +70,7 @@ def registrar_pagina_importar() -> None:
             itens_abas = [
                 ItemAbaAmostra(
                     codigo=am.codigo_amostra_principal,
-                    cor_dot="#D97706" if am.total_avisos > 0 else "#16A34A",
+                    cor_dot="#DC2626" if am.duplicada else ("#D97706" if am.total_avisos > 0 else "#16A34A"),
                     sufixo=f"({am.total_mapeados})",
                 )
                 for am in lote.amostras
@@ -179,7 +181,12 @@ def registrar_pagina_importar() -> None:
                                         f"Conclusão: {concl_str} · "
                                         f"{len(lote.amostras)} amostra(s) no lote"
                                     ).classes("text-[11px] text-[#52525B]")
-                            if pre.total_avisos > 0:
+                            if pre.duplicada:
+                                ui.html(
+                                    status_pill_html("AMOSTRA DUPLICADA (BLOQUEADA)", "solid-red"),
+                                    sanitize=False,
+                                )
+                            elif pre.total_avisos > 0:
                                 ui.html(
                                     status_pill_html(f"{pre.total_avisos} AVISO(S) DE REVISÃO", "outline-amber"),
                                     sanitize=False,
@@ -223,7 +230,7 @@ def registrar_pagina_importar() -> None:
                     locais_disp=locais_disp,
                     origens=repo.listar_origens(),
                     legs_compativeis=repo.listar_legislacoes_por_origem(estado["origem"]),
-                    listar_classes_fn=repo.listar_classes_legislacao,
+                    listar_classes_fn=lambda s: repo.listar_classes_legislacao(s, estado["origem"]),
                     on_trocar_cliente=_trocar_cliente,
                     on_trocar_proposta=_trocar_proposta,
                     on_trocar_local=lambda novo_loc: estado.__setitem__("local", novo_loc),
@@ -237,6 +244,16 @@ def registrar_pagina_importar() -> None:
                 )
 
             # --- Handlers ---
+            def _recalcular_lote_se_presente() -> None:
+                if estado["lote"] is not None:
+                    estado["lote"] = repo.recalcular_lote(
+                        lote=estado["lote"],
+                        origem=estado["origem"],
+                        normas_selecionadas=_pares_normas_atuais(),
+                    )
+                    render_barra_abas_amostras.refresh()
+                    render_secao_validacao.refresh()
+
             def _aplicar_lote(lote: ResultadoPreLeituraLote) -> None:
                 estado["lote"] = lote
                 estado["amostra_ativa"] = lote.amostras[0].codigo_amostra_principal if lote.amostras else None
@@ -250,7 +267,12 @@ def registrar_pagina_importar() -> None:
                 raw_bytes = await e.file.read()
                 nome = e.file.name
                 try:
-                    lote = repo.analisar_planilha(raw_bytes, nome)
+                    lote = repo.analisar_planilha(
+                        arquivo_bytes=raw_bytes,
+                        nome_arquivo=nome,
+                        origem=estado["origem"],
+                        normas_selecionadas=_pares_normas_atuais(),
+                    )
                 except Exception as exc:
                     mostrar_toast_aviso(f"Não foi possível ler '{nome}': {exc}")
                     return
@@ -291,18 +313,27 @@ def registrar_pagina_importar() -> None:
                 estado["kpi_foco"] = None
                 render_secao_validacao.refresh()
 
+            def _aplicar_contexto_proposta(cliente: str, proposta: str) -> None:
+                ctx = repo.obter_contexto_padrao_proposta(cliente, proposta)
+                estado["origem"] = ctx["origem"]
+                estado["normas"] = ctx["normas"]
+
             def _trocar_cliente(novo_cliente: str) -> None:
                 estado["cliente"] = novo_cliente
                 props = repo.listar_propostas(novo_cliente)
                 estado["proposta"] = props[0] if props else ""
                 locais = repo.listar_locais(novo_cliente, estado["proposta"])
                 estado["local"] = locais[0] if locais else ""
+                _aplicar_contexto_proposta(novo_cliente, estado["proposta"])
+                _recalcular_lote_se_presente()
                 render_secao_contexto_normas.refresh()
 
             def _trocar_proposta(nova_proposta: str) -> None:
                 estado["proposta"] = nova_proposta
                 locais = repo.listar_locais(estado["cliente"], nova_proposta)
                 estado["local"] = locais[0] if locais else ""
+                _aplicar_contexto_proposta(estado["cliente"], nova_proposta)
+                _recalcular_lote_se_presente()
                 render_secao_contexto_normas.refresh()
 
             def _trocar_origem(nova_origem: str) -> None:
@@ -312,6 +343,7 @@ def registrar_pagina_importar() -> None:
                     sigla0 = legs[0]["sigla"]
                     cl0 = legs[0]["classes"][0] if legs[0]["classes"] else None
                     estado["normas"] = [{"sigla": sigla0, "classe": cl0}]
+                _recalcular_lote_se_presente()
                 render_secao_contexto_normas.refresh()
 
             def _adicionar_norma() -> None:
@@ -335,21 +367,25 @@ def registrar_pagina_importar() -> None:
                     escolhido = {"sigla": m0["sigla"], "classe": m0["classes"][0] if m0["classes"] else None}
                 if escolhido:
                     estado["normas"].append(escolhido)
+                _recalcular_lote_se_presente()
                 render_secao_contexto_normas.refresh()
 
             def _remover_norma(idx: int) -> None:
                 if len(estado["normas"]) > 1 and 0 <= idx < len(estado["normas"]):
                     estado["normas"].pop(idx)
+                    _recalcular_lote_se_presente()
                     render_secao_contexto_normas.refresh()
 
             def _trocar_legislacao(idx: int, nova_sigla: str) -> None:
                 estado["normas"][idx]["sigla"] = nova_sigla
-                classes = repo.listar_classes_legislacao(nova_sigla)
+                classes = repo.listar_classes_legislacao(nova_sigla, estado["origem"])
                 estado["normas"][idx]["classe"] = classes[0] if classes else None
+                _recalcular_lote_se_presente()
                 render_secao_contexto_normas.refresh()
 
             def _trocar_classe(idx: int, nova_classe: str) -> None:
                 estado["normas"][idx]["classe"] = nova_classe
+                _recalcular_lote_se_presente()
 
             def _confirmar_importacao() -> None:
                 lote: ResultadoPreLeituraLote | None = estado["lote"]
@@ -357,19 +393,35 @@ def registrar_pagina_importar() -> None:
                     mostrar_toast_aviso("Envie uma planilha antes de confirmar.")
                     return
 
-                pares = [(n["sigla"], n["classe"]) for n in estado["normas"]]
+                duplicadas = [am.codigo_amostra_principal for am in lote.amostras if am.duplicada]
+                if duplicadas:
+                    mostrar_toast_aviso(
+                        f"Importação bloqueada (CT-11): amostra(s) já cadastrada(s) ou repetida(s): {', '.join(duplicadas)}"
+                    )
+                    return
+
+                pares = _pares_normas_atuais()
                 if len(pares) != len(set(pares)):
                     mostrar_toast_aviso("Remova legislações/classes duplicadas antes de continuar.")
                     return
 
-                criadas = repo.criar_lote_importado(
-                    lote=lote,
-                    cliente=estado["cliente"],
-                    proposta=estado["proposta"],
-                    local_coleta=estado["local"],
-                    origem=estado["origem"],
-                    normas_selecionadas=pares,
-                )
+                usr_logado = obter_usuario_logado() or {}
+                usuario_ref = usr_logado.get("id") or usr_logado.get("nome_usuario")
+
+                try:
+                    criadas = repo.criar_lote_importado(
+                        lote=lote,
+                        cliente=estado["cliente"],
+                        proposta=estado["proposta"],
+                        local_coleta=estado["local"],
+                        origem=estado["origem"],
+                        normas_selecionadas=pares,
+                        usuario=usuario_ref,
+                    )
+                except ValueError as exc:
+                    mostrar_toast_aviso(str(exc))
+                    return
+
                 codigos_lote = [a.codigo for a in criadas]
                 definir_lote_sessao(codigos_lote)
 

@@ -293,6 +293,11 @@ def definir_sinalizacao_ensaio(ensaio: EnsaioResultado) -> tuple[Optional[str], 
             return "LIMITE ESTRITO", "red"
 
     if ensaio.estatistica and ensaio.estatistica.alerta_desvio:
+        ops = {av.operador for av in ensaio.avaliacoes.values()}
+        if ops == {"MAIOR_IGUAL"}:
+            return "DESVIO < μ−0,20σ", "amber"
+        if ops == {"FAIXA"}:
+            return "DESVIO μ±0,20σ", "amber"
         return "DESVIO > μ+0,20σ", "amber"
 
     if ensaio.qualificador == "<" and ensaio.status == STATUS_PENDENTE:
