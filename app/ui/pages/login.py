@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from nicegui import app, ui
 
-from app.repo.mock_repo import repo
+from app.repo import repo
 from app.ui.auth import login_usuario
 from app.ui.theme import aplicar_tema_global
 
@@ -112,7 +112,7 @@ def registrar_pagina_login() -> None:
                         user = repo.autenticar(inp_usuario.value or "", inp_senha.value or "")
                         if not user:
                             erro_label.set_text(
-                                "Usuário ou senha inválidos. Para testar a POC use samuel.wiegand / 123456."
+                                "Usuário ou senha inválidos. Verifique suas credenciais de conferente."
                             )
                             erro_label.set_visibility(True)
                             return
@@ -132,5 +132,5 @@ def registrar_pagina_login() -> None:
                     )
 
                     ui.label(
-                        "Autenticação simplificada da POC · dados mockados em memória (senha padrão: 123456)."
+                        "Autenticação institucional IST Ambiental · auditoria vinculada ao PostgreSQL (RN-10)."
                     ).classes("text-[11px] text-[#71717A] leading-[16px]")

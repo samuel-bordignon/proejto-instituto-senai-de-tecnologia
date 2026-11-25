@@ -87,6 +87,8 @@ class AvaliacaoNorma(BaseModel):
     norma_nome_parecer: str
     vmp_texto: str
     vmp_numerico_ref: Optional[float] = None
+    vmp_min: Optional[float] = None
+    vmp_max: Optional[float] = None
     operador: str
     conformidade: Optional[bool] = None  # True=Conforme, False=Não conforme, None=Pendente
     motivo: str = "AVALIADO"  # AVALIADO | UNIDADE_DIVERGENTE | MANUAL_TECNICA | NAO_NUMERICO
@@ -170,8 +172,10 @@ class ResultadoPreLeitura(BaseModel):
     nome_arquivo: str
     amostras_detectadas: int = 1
     codigo_amostra_principal: str
+    codigo_externo: Optional[str] = None
     data_coleta: date
     data_conclusao: Optional[date] = None
+    duplicada: bool = False
     total_mapeados: int = 0
     total_sem_vmp: int = 0
     total_ignorados: int = 0

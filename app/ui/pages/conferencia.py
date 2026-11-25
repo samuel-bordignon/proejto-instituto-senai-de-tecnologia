@@ -1,4 +1,4 @@
-"""Tela B4 — Conferência da Amostra (/amostra/{codigo}) conforme POC Seções 5.1–5.5, 6.5, 6.6, 8.3 e 8.6."""
+"""Tela B4 — Conferência da Amostra (/amostra/{codigo}) conectada ao PostgreSQL com exportação PDF/XLSX e PRL."""
 
 from __future__ import annotations
 
@@ -18,8 +18,9 @@ from app.core.motor_conformidade import (
     definir_sinalizacao_ensaio,
     gerar_parecer_automatico,
 )
-from app.repo.mock_repo import repo
+from app.repo import repo
 from app.services.pdf_service import gerar_pdf_amostra
+from app.services.xlsx_service import gerar_xlsx_amostra
 from app.ui.auth import obter_usuario_logado
 from app.ui.components.badges import status_pill_html, variante_status_geral
 from app.ui.components.barra_lote import (
@@ -38,7 +39,7 @@ from app.ui.layout import criar_shell, mostrar_toast_aviso, mostrar_toast_sucess
 
 
 def _escolher_ensaio_inicial(amostra: Amostra) -> int:
-    """Seleciona prioritariamente o ensaio com desvio histórico ou violação (ex: 106 na 63450/2026)."""
+    """Seleciona prioritariamente o ensaio com desvio histórico ou violação (ex: 106/111 na 63450/2026)."""
     for e in amostra.ensaios:
         if e.estatistica and e.estatistica.alerta_desvio:
             return e.codigo
@@ -72,7 +73,8 @@ def registrar_pagina_conferencia() -> None:
                 )
             return
 
-        usuario_atual = (obter_usuario_logado() or {}).get("nome_usuario", "samuel.wiegand")
+        usr_sessao = obter_usuario_logado() or {}
+        usuario_atual = usr_sessao.get("id") or usr_sessao.get("nome_usuario") or "samuel.wiegand"
 
         estado: dict = {
             "amostra": amostra,
@@ -80,7 +82,9 @@ def registrar_pagina_conferencia() -> None:
             "dirty": False,
         }
 
-        def _obter_ensaio(cod_e: int) -> EnsaioResultado:
+        def _obter_ensaio(cod_e: int) -> EnsaioResultado | None:
+            if not estado["amostra"].ensaios:
+                return None
             for item in estado["amostra"].ensaios:
                 if item.codigo == cod_e:
                     return item
@@ -119,7 +123,7 @@ def registrar_pagina_conferencia() -> None:
         with ui.column().classes(
             "w-full max-w-[1360px] mx-auto px-[24px] lg:px-[32px] py-[24px] gap-[18px]"
         ):
-            # 1. Cabeçalho de Ações (Voltar, Código, Histórico, PDF, Salvar)
+            # 1. Cabeçalho de Ações (Voltar, Código, Histórico, XLSX, PDF, Salvar)
             @ui.refreshable
             def render_cabecalho() -> None:
                 am: Amostra = estado["amostra"]
@@ -159,6 +163,13 @@ def registrar_pagina_conferencia() -> None:
                         ).props("unelevated no-caps").classes("lt-btn-secondary")
 
                         ui.button(
+                            "Exportar XLSX",
+                            icon="table_view",
+                            color="white",
+                            on_click=lambda: _exportar_xlsx(),
+                        ).props("unelevated no-caps").classes("lt-btn-secondary")
+
+                        ui.button(
                             "Exportar PDF",
                             icon="description",
                             color="white",
@@ -171,10 +182,12 @@ def registrar_pagina_conferencia() -> None:
                             on_click=lambda: _salvar_conferencia(),
                         ).props("unelevated no-caps").classes("lt-btn-primary")
 
-            # 2. Card Gráfico Histórico por Ensaio (ui.plotly + linha de μ)
+            # 2. Card Gráfico Histórico por Ensaio (ui.plotly + linha de μ + suporte MAIOR_IGUAL / FAIXA)
             @ui.refreshable
             def render_card_grafico() -> None:
                 ensaio = _obter_ensaio(estado["ensaio_selecionado"])
+                if not ensaio:
+                    return
                 fig, meta = construir_figura_historico(ensaio)
                 unid_txt = f" ({ensaio.unidade_trabalho})" if ensaio.unidade_trabalho else ""
 
@@ -199,7 +212,7 @@ def registrar_pagina_conferencia() -> None:
                             for rotulo, valor in [
                                 ("Média (μ):", meta["media"]),
                                 ("Desvio (σ):", meta["sigma"]),
-                                ("Limiar μ+0,20σ:", meta["limiar"]),
+                                (meta.get("limiar_label", "Limiar μ+0,20σ:"), meta["limiar"]),
                                 (meta["vmp_label"], meta["vmp_texto"]),
                             ]:
                                 with ui.row().classes("items-baseline gap-[4px] no-wrap"):
@@ -234,7 +247,7 @@ def registrar_pagina_conferencia() -> None:
                 on_obs_change=lambda e: _ao_mudar_observacao(e),
             )
 
-            # 4. Card Conclusão da Amostra (Parecer Técnico Editável)
+            # 4. Card Conclusão da Amostra (Parecer Técnico Editável + Ações PRL)
             @ui.refreshable
             def render_card_parecer() -> None:
                 am: Amostra = estado["amostra"]
@@ -250,9 +263,24 @@ def registrar_pagina_conferencia() -> None:
                                 "text-[15px] font-bold text-[#111827]"
                             )
                             ui.html(pill_geral, sanitize=False)
-                        ui.label(
-                            "Status geral derivado automaticamente dos ensaios (Seção 5.1)"
-                        ).classes("text-[11px] text-[#71717A]")
+                            ui.label(
+                                "Status geral 100% derivado dos ensaios (RN-07)"
+                            ).classes("text-[11px] text-[#71717A]")
+
+                        with ui.row().classes("items-center gap-[8px] flex-wrap"):
+                            ui.button(
+                                "Regerar automático",
+                                icon="autorenew",
+                                color="white",
+                                on_click=lambda: _regerar_parecer(),
+                            ).props("unelevated no-caps dense").classes("lt-btn-secondary px-[12px]")
+
+                            ui.button(
+                                "Copiar texto (PRL)",
+                                icon="content_copy",
+                                color="white",
+                                on_click=lambda: _copiar_parecer_prl(),
+                            ).props("unelevated no-caps dense").classes("lt-btn-secondary px-[12px]")
 
                     def _ao_editar_parecer(e) -> None:
                         novo_txt = e.value or ""
@@ -288,7 +316,7 @@ def registrar_pagina_conferencia() -> None:
                 cod = int(payload["codigo"])
                 novo_status = str(payload["status"])
                 ensaio = _obter_ensaio(cod)
-                if ensaio.status == novo_status:
+                if not ensaio or ensaio.status == novo_status:
                     return
 
                 ensaio.status = novo_status  # type: ignore[assignment]
@@ -311,11 +339,26 @@ def registrar_pagina_conferencia() -> None:
                 cod = int(payload["codigo"])
                 nova_obs = str(payload.get("obs", "")).strip()
                 ensaio = _obter_ensaio(cod)
-                if ensaio.observacao != nova_obs:
+                if ensaio and ensaio.observacao != nova_obs:
                     ensaio.observacao = nova_obs
                     if not estado["dirty"]:
                         estado["dirty"] = True
                         render_cabecalho.refresh()
+
+            def _regerar_parecer() -> None:
+                am: Amostra = estado["amostra"]
+                novo_txt = gerar_parecer_automatico(am)
+                if novo_txt != am.parecer:
+                    am.parecer = novo_txt
+                    estado["dirty"] = True
+                    render_cabecalho.refresh()
+                    render_card_parecer.refresh()
+                mostrar_toast_sucesso("Minuta padrão regerada automaticamente")
+
+            def _copiar_parecer_prl() -> None:
+                texto = estado["amostra"].parecer or ""
+                ui.clipboard.write(texto)
+                mostrar_toast_sucesso("Texto do parecer copiado para a área de transferência (PRL)")
 
             def _salvar_conferencia() -> None:
                 am: Amostra = estado["amostra"]
@@ -351,6 +394,17 @@ def registrar_pagina_conferencia() -> None:
                     filename=f"LaudoTech_Parecer_{nome_seguro}.pdf",
                     media_type="application/pdf",
                 )
-                mostrar_toast_sucesso("Arquivo exportado com sucesso")
+                mostrar_toast_sucesso("PDF exportado com sucesso")
+
+            def _exportar_xlsx() -> None:
+                am: Amostra = estado["amostra"]
+                xlsx_bytes = gerar_xlsx_amostra(am)
+                nome_seguro = am.codigo.replace("/", "_").replace(" ", "_")
+                ui.download(
+                    xlsx_bytes,
+                    filename=f"LaudoTech_Conferencia_{nome_seguro}.xlsx",
+                    media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                )
+                mostrar_toast_sucesso("Planilha XLSX exportada com sucesso")
 
             render_card_parecer()
